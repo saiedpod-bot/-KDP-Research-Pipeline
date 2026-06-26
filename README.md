@@ -3,65 +3,65 @@
   <img src="https://img.shields.io/badge/Python-3.9+-yellow?style=for-the-badge&logo=python" alt="Python">
   <img src="https://img.shields.io/badge/Streamlit-1.28+-red?style=for-the-badge&logo=streamlit" alt="Streamlit">
   <br>
-  <strong>🛰️ منصة متكاملة لاكتشاف وتحليل الفرص الربحية في سوق Kindle Direct Publishing (KDP)</strong>
+  <strong>🛰️ Full-stack niche validation platform for Kindle Direct Publishing</strong>
   <br>
-  تجميع بيانات ← تحليل ذكي ← تصدير ← لوحة تحكم تفاعلية ← محرك اكتشاف متقدم
+  Data scraping → Smart analysis → Export → Interactive dashboard → Advanced discovery engine
 </p>
 
 <p align="center">
-  <a href="#-عن-الأداة">عن الأداة</a> ·
-  <a href="#-الميزات-الرئيسية">الميزات</a> ·
-  <a href="#-طريقة-التثبيت">التثبيت</a> ·
-  <a href="#-طريقة-الاستخدام">الاستخدام</a> ·
-  <a href="#-الميزات-المتقدمة">المتقدمة</a> ·
-  <a href="#-نظام-multi-agent-pipeline">Multi-Agent</a> ·
-  <a href="#-المصادر-والمراجع">المصادر</a>
+  <a href="#-about">About</a> ·
+  <a href="#-features">Features</a> ·
+  <a href="#-installation">Installation</a> ·
+  <a href="#-usage">Usage</a> ·
+  <a href="#-advanced-features">Advanced</a> ·
+  <a href="#-multi-agent-pipeline">Multi-Agent</a> ·
+  <a href="#-roadmap">Roadmap</a>
 </p>
 
 ---
 
-## 🌟 عن الأداة
+## 🌟 About
 
-**KDP Research Pipeline** منصة مفتوحة المصدر لمؤلفي KDP، تغطي دورة حياة الكتاب بالكامل:
+**KDP Research Pipeline** is an open-source platform for KDP authors, covering the complete book lifecycle:
 
-| المرحلة | الوظيفة | الحالة |
-|---------|---------|--------|
-| 1. **Niche Research** | اكتشاف المجالات الربحية وتحليل المنافسين | ✅ مكتمل |
-| 2. **Content Creation** | تخطيط وكتابة المخطوطات عبر 33 وكيل ذكي | ✅ مكتمل |
-| 3. **Formatting & Layout** | تنسيق إلكتروني + طباعي | ⏳ قادم |
-| 4. **Cover Design** | تصميم الغلاف | ⏳ قادم |
-| 5. **Listing Optimization** | عنوان + وصف + كلمات مفتاحية | ⏳ قادم |
-| 6. **Amazon Ads** | إعلانات أمازون المُدارة | ⏳ قادم |
-| 7. **Launch Strategy** | خطة إطلاق متكاملة | ⏳ قادم |
-| 8. **Post-Launch Monitoring** | مراقبة + تحديثات | ⏳ قادم |
+| Phase | Purpose | Status |
+|-------|---------|--------|
+| 1. **Niche Research** | Market opportunity discovery + competitor analysis | ✅ Complete |
+| 2. **Content Creation** | Manuscript planning & writing via 33 AI agents | ✅ Complete |
+| 3. **Formatting & Layout** | Kindle + Paperback formatting | ⏳ Upcoming |
+| 4. **Cover Design** | Front/back cover + 3D mockup | ⏳ Upcoming |
+| 5. **Listing Optimization** | Title + description + keywords + A+ | ⏳ Upcoming |
+| 6. **Amazon Ads** | Managed ad campaigns | ⏳ Upcoming |
+| 7. **Launch Strategy** | ARC + launch + reviews | ⏳ Upcoming |
+| 8. **Post-Launch Monitoring** | Analytics + updates + spin-offs | ⏳ Upcoming |
 
-> 📘 **دراسة حالة:** **Low-FODMAP Kids' Cookbook** — 26 فصلاً، 68 وصفة، 33,879 كلمة، ~236 صفحة
-
----
-
-## ✨ الميزات الرئيسية
-
-| الميزة | الوصف |
-|--------|-------|
-| 🔍 **3 طرق بحث** | كلمة مفتاحية ← URL كامل (Tunneling) ← تفاصيل منتج |
-| 🧠 **SmartScore** | مقياس فرصة ذكي يجمع بين المبيعات والمنافسة |
-| 💎 **Gold Mine** | كشف المنتجات ذات الطلب العالي والمنافسة المنخفضة |
-| 📊 **Streamlit Dashboard** | 3 تبويبات + تصميم داكن + Developer Mode |
-| 🗄️ **SQLite محلي** | حفظ سجل البحث + الإعدادات + قائمة الاكتشاف |
-| 🚀 **New Release Mode** | تصفية فقط الإصدارات الجديدة (آخر 30 يوم) |
-| 🕳️ **Multi-Niche Tunneling** | إدخال رابط أمازون واستخراج البيانات مباشرة |
-| 🔗 **Smart Discovery** | اكتشاف كلمات مفتاحية ومجالات جديدة من ASIN |
-| 🤖 **33 وكيل ذكي** | تخطيط وكتابة الكتاب كاملاً عبر 8 مراحل |
-| 🏗️ **PyInstaller Build** | تطبيق `.exe` مستقل للتوزيع |
+> 📘 **Case Study:** **Low-FODMAP Kids' Cookbook** — 26 chapters, 68 recipes, 33,879 words, ~236 pages
 
 ---
 
-## 🏗️ البنية المعمارية
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔍 **3 Search Modes** | Keyword search · URL Tunneling · Product detail |
+| 🧠 **SmartScore** | Opportunity metric combining demand + competition |
+| 💎 **Gold Mine** | High-demand, low-competition product detection |
+| 📊 **Streamlit Dashboard** | 3 tabs · dark theme · Developer Mode toggle |
+| 🗄️ **Local SQLite** | Search history · settings · discovery queue |
+| 🚀 **New Release Mode** | Filter last 30 days only |
+| 🕳️ **Multi-Niche Tunneling** | Paste any Amazon URL to extract data |
+| 🔗 **Smart Discovery** | Auto-extract keywords & niches from ASINs |
+| 🤖 **33 AI Agents** | Full book pipeline orchestration (8 stages) |
+| 🏗️ **PyInstaller Build** | Standalone `.exe` distribution |
+
+---
+
+## 🏗️ Architecture
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
 │                    main.py  /  app.py                          │
-│            (سطر الأوامر)  (Streamlit Dashboard)                │
+│             (CLI)         (Streamlit Dashboard)                │
 ├───────────────────────────────────────────────────────────────┤
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────┐ │
 │  │ scraper  │→│ analyzer │→│ exporter │  │ config_manager│ │
@@ -76,33 +76,33 @@
 └───────────────────────────────────────────────────────────────┘
 ```
 
-### مسار البيانات
+### Data Flow
 
 ```
-بحث (SerpApi) → تصفية → تحليل → SmartScore → تصدير (Sheets / JSON) → Dashboard
+Search (SerpApi) → Filter → Analyze → SmartScore → Export (Sheets / JSON) → Dashboard
 ```
 
 ---
 
-## 📦 طريقة التثبيت
+## 📦 Installation
 
-### 1. المتطلبات الأساسية
+### 1. Prerequisites
 
-| المتطلب | الحد الأدنى | الموصى به |
-|---------|------------|-----------|
+| Requirement | Minimum | Recommended |
+|-------------|---------|-------------|
 | **Python** | 3.9 | 3.11+ |
-| **نظام التشغيل** | Windows 10 / macOS 12+ / Linux | أي 64-bit |
-| **مفتاح SerpApi** | مجاني (100 بحث/شهر) | مدفوع (حسب الحاجة) |
-| **اتصال بالإنترنت** | مطلوب لاستدعاء API | عالي السرعة |
+| **OS** | Windows 10 / macOS 12+ / Linux | Any 64-bit |
+| **SerpApi Key** | Free (100 searches/month) | Paid (unlimited) |
+| **Internet** | Required for API calls | Broadband |
 
-### 2. تنزيل المشروع
+### 2. Clone
 
 ```bash
 git clone https://github.com/saiedpod-bot/-KDP-Research-Pipeline.git
 cd KDP-Research-Pipeline
 ```
 
-### 3. إعداد البيئة الافتراضية
+### 3. Virtual Environment
 
 <details open>
 <summary><b>Windows</b></summary>
@@ -126,93 +126,93 @@ pip install -r requirements.txt
 ```
 </details>
 
-### 4. إعداد مفتاح SerpApi
+### 4. SerpApi Key
 
 ```bash
 cp .env.example .env
 ```
 
-ثم افتح `.env` واكتب مفتاحك:
+Edit `.env`:
 
 ```ini
 SERPAPI_KEY=your_serpapi_key_here
 ```
 
-> 🔑 احصل على مفتاح مجاني من [serpapi.com](https://serpapi.com) (يكفي لـ 100 بحث في الشهر)
+> 🔑 Get a free key at [serpapi.com](https://serpapi.com) (100 searches/month free tier)
 
 ---
 
-## 💻 طريقة الاستخدام
+## 💻 Usage
 
-### ▶️ سطر الأوامر (CLI)
+### ▶️ Command Line (CLI)
 
 ```bash
-# بحث سريع (صفحة واحدة)
+# Quick scan (1 page)
 python main.py "low fodmap cookbook for kids"
 
-# بحث عميق (5 صفحات)
+# Deep scan (5 pages)
 python main.py "coloring books for adults" --max-pages 5 --min-price 7.00
 
-# تصدير إلى Google Sheets
+# Export to Google Sheets
 python main.py "adhd planner" --max-pages 5 --sheet-id "1abc123..."
 ```
 
-| الباراميتر | النوع | الافتراضي | الشرح |
-|-----------|------|----------|-------|
-| `query` | نص | **إجباري** | كلمة البحث |
-| `--max-pages` | رقم | 3 | عدد الصفحات (كل صفحة ← 20-50 منتج) |
-| `--min-price` | رقم | 5.00 | أقل سعر للتصفية |
-| `--sheet-id` | نص | — | معرف Google Sheet للتصدير |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query` | str | **required** | Amazon search keyword |
+| `--max-pages` | int | 3 | Pages to fetch (20-50 products each) |
+| `--min-price` | float | 5.00 | Minimum price filter |
+| `--sheet-id` | str | — | Google Sheet ID for export |
 
-| عمق البحث | الأمر | النتائج | الاستخدام |
-|-----------|-------|---------|-----------|
-| 🟢 سريع | `--max-pages 1` | 20-50 | اختبار أولي |
-| 🟡 قياسي | `--max-pages 3` | 50-150 | تحليل منافسة روتيني |
-| 🔴 عميق | `--max-pages 5` | 100-200+ | مجالات مزدحمة |
+| Depth | Command | Results | Best For |
+|-------|---------|---------|----------|
+| 🟢 Quick | `--max-pages 1` | 20-50 | Initial sniff test |
+| 🟡 Standard | `--max-pages 3` | 50-150 | Regular analysis |
+| 🔴 Deep | `--max-pages 5` | 100-200+ | Saturated niches |
 
-### 🖥️ لوحة التحكم (Streamlit Dashboard)
+### 🖥️ Streamlit Dashboard
 
 ```bash
 streamlit run app.py
 ```
 
-يفتح في المتصفح على `http://localhost:8501`
+Opens at `http://localhost:8501`
 
-#### تبويبات Dashboard
+#### Tabs
 
-| التبويب | الوظيفة |
-|---------|---------|
-| **📊 Dashboard** | بحث + تصفية + New Release + Tunneling + Discover More |
-| **⚙️ Settings** | إدخال SerpApi key + Sheet ID + Clear History |
-| **📜 History** | سجل آخر 50 بحث + تحميل النتائج + Discovery Queue |
+| Tab | Purpose |
+|-----|---------|
+| **📊 Dashboard** | Search + filter + New Release + Tunneling + Discover More |
+| **⚙️ Settings** | SerpApi key + Sheet ID + Clear History |
+| **📜 History** | Last 50 searches + Load Results + Discovery Queue |
 
-#### الشريط الجانبي
+#### Sidebar
 
-| العنصر | الوظيفة |
-|--------|---------|
-| **👨‍💻 Developer Mode** | إظهار/إخفاء السجلات التقنية (يُحفظ في SQLite) |
-| **🆕 New Release Mode** | تصفية آخر 30 يوم فقط |
+| Item | Purpose |
+|------|---------|
+| **👨‍💻 Developer Mode** | Show/hide technical logs (persisted to SQLite) |
+| **🆕 New Release Mode** | Filter last 30 days only |
 
 ---
 
-## 🧠 SmartScore — مقياس الفرصة الذكية
+## 🧠 SmartScore
 
 ```
 SmartScore = ReviewCount / (BSR + 1)
 ```
 
-| القيمة | الدلالة |
-|--------|---------|
-| **ReviewCount عالي** | طلب قوي + دليل اجتماعي |
-| **BSR منخفض** | سرعة مبيعات عالية |
-| **القسمة على (BSR+1)** | تعاقب المنافسين الراسخين |
-| **النتيجة** | كلما زاد الرقم = فرصة أكبر |
+| Component | Meaning |
+|-----------|---------|
+| **High ReviewCount** | Strong demand + social proof |
+| **Low BSR** | High sales velocity |
+| **Division by (BSR+1)** | Penalizes entrenched competitors |
+| **Result** | Higher score = better opportunity |
 
-> ⚠️ **ملاحظة:** حالياً BSR = 0 لجميع النتائج (يحتاج Product API). SmartScore = ReviewCount مؤقتاً.
+> ⚠️ **Note:** BSR is currently 0 for all results (requires Product API). SmartScore = ReviewCount temporarily.
 
 ---
 
-## 💎 Gold Mine — منجم الفرص
+## 💎 Gold Mine
 
 ```
 +==========================================================+
@@ -224,289 +224,289 @@ SmartScore = ReviewCount / (BSR + 1)
 +==========================================================+
 ```
 
-### شروط الجوهرة ✅
+### Gem Criteria ✅
 
-| الشرط | القيمة | المعنى |
-|-------|--------|--------|
-| BSR | < 50,000 | المنتج يبيع |
-| ReviewCount | < 30 | المجال غير مشبع |
+| Condition | Threshold | Meaning |
+|-----------|-----------|---------|
+| BSR | < 50,000 | Product sells |
+| ReviewCount | < 30 | Niche not saturated |
 
-> 💡 **نصيحة:** ركز على المنتجات ذات 10-29 مراجعة وتقييم عالي ← دليل أن المجال يحقق مبيعات
+> 💡 **Tip:** Focus on products with 10-29 reviews and high ratings — validates the niche converts.
 
 ---
 
-## 🔬 شرح المكونات
+## 🔬 Components
 
-### Tier 1 — Scraper (التجميع)
+### Tier 1 — Scraper
 
-**الملف:** `core/scraper.py` · **الوظيفة:** جلب البيانات من أمازون عبر SerpApi
+**File:** `core/scraper.py` · **Purpose:** Fetch Amazon data via SerpApi
 
-| الدالة | الوظيفة |
-|--------|---------|
-| `fetch_amazon_data(query, api_key, page)` | جلب صفحة واحدة |
-| `fetch_all_pages(query, api_key, max_pages, filter_params)` | جلب صفحات متعددة + إزالة تكرار |
-| `fetch_amazon_data_paginated(query, api_key, max_pages, filter_params)` | جلب مع ترقيم متسلسل |
-| `search_and_format(query, api_key, max_pages, filter_params)` | جلب + تنسيق في خطوة |
-| `fetch_product_details(asin, api_key)` | تفاصيل منتج محدد (1 رصيد SerpApi) |
-| `fetch_category_url(url, api_key)` | جلب من رابط أمازون مباشرة |
-| `tunnel_category_pages(url, api_key, max_pages)` | تمرير صفحات من رابط واحد |
+| Function | Purpose |
+|----------|---------|
+| `fetch_amazon_data(query, api_key, page)` | Fetch single page |
+| `fetch_all_pages(query, api_key, max_pages, filter_params)` | Multi-page with dedup |
+| `fetch_amazon_data_paginated(query, api_key, max_pages, filter_params)` | Sequential pagination |
+| `search_and_format(query, api_key, max_pages, filter_params)` | Fetch + format in one call |
+| `fetch_product_details(asin, api_key)` | Single ASIN detail (1 credit) |
+| `fetch_category_url(url, api_key)` | Fetch from any Amazon URL |
+| `tunnel_category_pages(url, api_key, max_pages)` | Multi-page from single URL |
 
-> **آلية التكرار (Backoff):** 1s → 2s → 4s → 8s → 16s (حتى 5 محاولات)
+> **Exponential Backoff:** 1s → 2s → 4s → 8s → 16s (up to 5 retries)
 
-### Tier 2 — Analyzer (التحليل)
+### Tier 2 — Analyzer
 
-**الملف:** `core/analyzer.py` · **الوظيفة:** تحليل البيانات وتحديد الفرص
+**File:** `core/analyzer.py` · **Purpose:** Score + detect opportunities
 
-| الدالة | الوظيفة |
-|--------|---------|
-| `run_analysis(rows)` | تحميل → تصفية → تسجيل → حفظ |
-| `find_gems_dataframe(df)` | كشف الجواهر باستخدام pandas |
-| `find_low_competition_gems(rows)` | كشف الجواهر بدون pandas |
-| `filter_by_price(rows, min_price)` | تصفية حسب السعر |
+| Function | Purpose |
+|----------|---------|
+| `run_analysis(rows)` | Load → filter → score → save |
+| `find_gems_dataframe(df)` | Pandas-based gem detection |
+| `find_low_competition_gems(rows)` | Pure-Python gem detection |
+| `filter_by_price(rows, min_price)` | Price filter |
 
-### Tier 3 — Exporter (التصدير)
+### Tier 3 — Exporter
 
-**الملف:** `core/exporter.py` · **الوظيفة:** تصدير النتائج إلى Google Sheets
+**File:** `core/exporter.py` · **Purpose:** Export to Google Sheets
 
-| الدالة | الوظيفة |
-|--------|---------|
-| `run_export(rows, sheet_id, creds_path)` | توثيق → رفع → كتابة |
-| `export_with_service_account(rows, sheet_id, creds_path)` | رفع بحساب خدمة Google |
+| Function | Purpose |
+|----------|---------|
+| `run_export(rows, sheet_id, creds_path)` | Auth → upload → write |
+| `export_with_service_account(rows, sheet_id, creds_path)` | Service account export |
 
 ### Tier 4 — Database & Config
 
-**الملفات:** `core/database.py` + `core/config_manager.py`
+**Files:** `core/database.py` + `core/config_manager.py`
 
-**جداول SQLite:**
+**SQLite Tables:**
 
-| الجدول | المحتوى |
-|--------|---------|
-| `search_history` | آخر 50 بحث + معاملات + نتائج |
+| Table | Content |
+|-------|---------|
+| `search_history` | Last 50 searches + params + results |
 | `settings` | SerpApi key + Sheet ID + Developer Mode |
-| `discovery_queue` | مصطلحات مكتشفة + مصدر + نتيجة |
+| `discovery_queue` | Discovered terms + source + status |
 
-**أولوية الإعدادات:** SQLite DB → `.env` → متغير البيئة → القيمة الافتراضية
+**Config Priority Chain:** SQLite DB → `.env` → environment variable → default
 
-### Tier 5 — Dashboard (Streamlit)
+### Tier 5 — Dashboard
 
-**الملف:** `app.py`
+**File:** `app.py`
 
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat&logo=streamlit&logoColor=white)
 
-- تصميم داكن (`.streamlit/config.toml`)
-- أعمدة تفاعلية: ASIN كرابط قابل للضغط
+- Dark theme (`.streamlit/config.toml`)
+- Clickable ASIN links
 - Est. Daily Sales = `10000 / BSR`
-- تنسيق الأسعار `$%.2f`
-- ألوان حسب القيمة
+- Price formatting `$%.2f`
+- Color-coded columns
 
 ---
 
-## 🚀 الميزات المتقدمة
+## 🚀 Advanced Features
 
 ### 🔍 Smart Niche Discovery
 
-اكتشاف آلي لكلمات مفتاحية من المنتجات الحالية.
+Auto-discover keywords from existing products.
 
 ```
-1. اختيار 3 ASINs من النتائج
-2. fetch_product_details() ← SerpApi Product API (3 أرصدة)
-3. extract_discovery_terms() ← يستخرج:
-   ├── Categories        (الدرجة: 90) ← تصنيفات أمازون
-   ├── Bought Together   (الدرجة: 70) ← منتجات تُشترى معاً
-   └── Also Bought       (الدرجة: 40) ← منتجات ذات صلة
-4. حفظ في discovery_queue ← عرض في Dashboard
+1. Pick 3 ASINs from results
+2. fetch_product_details() → SerpApi Product API (3 credits)
+3. extract_discovery_terms() extracts:
+   ├── Categories        (score: 90) ← Amazon browse nodes
+   ├── Bought Together   (score: 70) ← frequently bought items
+   └── Also Bought       (score: 40) ← related products
+4. Saved to discovery_queue → displayed in Dashboard
 ```
 
 ### 🆕 New Release Mode
 
 ```
-✅ تفعيل من sidebar checkbox
-📡 يُمرر filter_params = {"rh": "p_n_publication_date:1250226011"}
-🎯 يظهر فقط الإصدارات الجديدة (آخر 30 يوم)
+✅ Toggle in sidebar
+📡 Sends filter_params = {"rh": "p_n_publication_date:1250226011"}
+🎯 Shows only products released in the last 30 days
 ```
 
 ### 🕳️ Multi-Niche Tunneling
 
 ```
-✅ إدخال رابط أمازون بدلاً من كلمة بحث
-📡 يستخدم SerpApi 'url' parameter
-🔄 tunnel_category_pages() يمرر صفحات متعددة
-🎯 مفيد لـ: Bestsellers / New Releases / تصنيف محدد
+✅ Paste any Amazon URL instead of a keyword
+📡 Uses SerpApi 'url' parameter
+🔄 tunnel_category_pages() auto-paginates
+🎯 Great for: Bestsellers / New Releases / specific categories
 ```
 
 ### 🔧 Search Filters (rh)
 
 ```
-✅ حقل نصي يمرر rh مباشرة لـ SerpApi
-✅ يدعم أي فلتر متصفح أمازون
-✅ مثال: p_n_publication_date:1250226011|p_n_condition-type:6350179011
+✅ Free-text field, passed verbatim to SerpApi
+✅ Supports any Amazon browser filter
+✅ Example: p_n_publication_date:1250226011|p_n_condition-type:6350179011
 ```
 
 ### 👨‍💻 Developer Mode
 
 ```
-✅ checkbox في الشريط الجانبي
-✅ يخفي/يظهر السجلات التقنية + بطاقات الحالة
-✅ يُحفظ التفضيل في SQLite تلقائياً
+✅ Sidebar checkbox
+✅ Hides/shows technical logs + status cards
+✅ Preference auto-saved to SQLite
 ```
 
 ---
 
-## 🤖 نظام Multi-Agent Pipeline
+## 🤖 Multi-Agent Pipeline
 
-**الملفات المرجعية:** `multi-agent-full-pipeline.md` · `multi-agent-niche-research.md`
+**Reference files:** `multi-agent-full-pipeline.md` · `multi-agent-niche-research.md`
 
-### 33 وكيل ذكي عبر 8 مراحل
+### 33 AI Agents across 8 Stages
 
 ```mermaid
 graph LR
-    A[1. Niche Research<br>6+1 وكلاء] --> B[2. Content Creation<br>3 وكلاء]
-    B --> C[3. Formatting<br>2 وكلاء]
-    C --> D[4. Cover Design<br>4 وكلاء]
-    D --> E[5. Listing<br>4 وكلاء]
-    E --> F[6. Amazon Ads<br>6 وكلاء]
-    F --> G[7. Launch<br>4 وكلاء]
-    G --> H[8. Post-Launch<br>4 وكلاء]
+    A[1. Niche Research<br>6+1 agents] --> B[2. Content Creation<br>3 agents]
+    B --> C[3. Formatting<br>2 agents]
+    C --> D[4. Cover Design<br>4 agents]
+    D --> E[5. Listing<br>4 agents]
+    E --> F[6. Amazon Ads<br>6 agents]
+    F --> G[7. Launch<br>4 agents]
+    G --> H[8. Post-Launch<br>4 agents]
 ```
 
-| المرحلة | عدد الوكلاء | الوظيفة |
-|---------|:----------:|---------|
-| 1. Niche Research | 6+1 | أبحاث سوق متعمقة |
-| 2. Content Creation | 3 | تخطيط + كتابة + مراجعة |
+| Stage | Agents | Purpose |
+|-------|:------:|---------|
+| 1. Niche Research | 6+1 | Deep market research |
+| 2. Content Creation | 3 | Plan + write + review |
 | 3. Formatting & Layout | 2 | Kindle + Paperback |
-| 4. Cover Design | 4 | أمامي + خلفي + 3D |
-| 5. Listing Optimization | 4 | عنوان + وصف + Keywords + A+ |
-| 6. Amazon Ads | 6 | حملات إعلانية مُدارة |
-| 7. Launch Strategy | 4 | ARC + إطلاق + مراجعات |
-| 8. Post-Launch Monitoring | 4 | تحليل + تحديث + تفرع |
+| 4. Cover Design | 4 | Front + back + 3D |
+| 5. Listing Optimization | 4 | Title + desc + keywords + A+ |
+| 6. Amazon Ads | 6 | Managed ad campaigns |
+| 7. Launch Strategy | 4 | ARC + launch + reviews |
+| 8. Post-Launch Monitoring | 4 | Analytics + update + spin-off |
 
-### دراسة حالة: Low-FODMAP Kids' Cookbook
+### Case Study: Low-FODMAP Kids' Cookbook
 
-| المقياس | القيمة |
-|---------|-------|
-| **عدد الفصول** | 26 فصلاً |
-| **عدد الأجزاء** | 8 أجزاء |
-| **عدد الوصفات** | 68 وصفة |
-| **إجمالي الكلمات** | 33,879 كلمة |
-| **الطول التقديري** | 200-250 صفحة |
-| **الجمهور المستهدف** | 10-15% من الأطفال |
-| **المنافس الوحيد** | 742 مراجعة · 4.5★ |
-
----
-
-## 📖 مخطوطة الكتاب
-
-| الملف | المحتوى |
-|-------|---------|
-| `manuscript-frontmatter-part1.md` | المقدمة + أساسيات Low-FODMAP |
-| `manuscript-part2-breakfasts.md` | وجبات الإفطار |
-| `manuscript-part3-lunchbox.md` | وجبات المدرسة |
-| `manuscript-part4-dinner.md` | وجبات العشاء |
-| `manuscript-part5-snacks.md` | الوجبات الخفيفة |
-| `manuscript-part6-desserts.md` | الحلويات |
-| `manuscript-part7-drinks.md` | المشروبات |
-| `manuscript-part8-backmatter.md` | الخاتمة + الملاحق |
+| Metric | Value |
+|--------|-------|
+| **Chapters** | 26 |
+| **Parts** | 8 |
+| **Recipes** | 68 |
+| **Word Count** | 33,879 |
+| **Est. Pages** | 200-250 |
+| **Target Audience** | 10-15% of children with IBS |
+| **Top Competitor** | 742 reviews · 4.5★ |
 
 ---
 
-## 📚 المصادر والمراجع
+## 📖 Manuscript Files
 
-| المصدر | النوع | التكلفة | الاستخدام |
-|--------|------|:-------:|-----------|
-| [SerpApi](https://serpapi.com) | Amazon Search | 100/شهر مجاني | بحث أمازون |
-| [SerpApi Product API](https://serpapi.com/product-search) | Product Detail | 1 رصيد/ASIN | تفاصيل المنتج |
-| [Google Sheets API](https://console.cloud.google.com) | Spreadsheet | مجاني | تصدير البيانات |
+| File | Content |
+|------|---------|
+| `manuscript-frontmatter-part1.md` | Introduction + Low-FODMAP basics |
+| `manuscript-part2-breakfasts.md` | Breakfast recipes |
+| `manuscript-part3-lunchbox.md` | School lunch recipes |
+| `manuscript-part4-dinner.md` | Dinner recipes |
+| `manuscript-part5-snacks.md` | Snack recipes |
+| `manuscript-part6-desserts.md` | Dessert recipes |
+| `manuscript-part7-drinks.md` | Drink recipes |
+| `manuscript-part8-backmatter.md` | Conclusion + appendices |
 
-### المكتبات المطلوبة
+---
 
-| المكتبة | الإصدار | الاستخدام |
-|---------|:-------:|-----------|
-| `streamlit` | ≥1.28 | لوحة التحكم |
-| `pandas` | ≥1.5 | تحليل البيانات |
-| `serpapi` | ≥0.1 | واجهة أمازون |
-| `requests` | ≥2.28 | اتصالات HTTP |
+## 📚 Sources & References
+
+| Source | Type | Cost | Usage |
+|--------|------|:----:|-------|
+| [SerpApi](https://serpapi.com) | Amazon Search | 100/mo free | Amazon search |
+| [SerpApi Product API](https://serpapi.com/product-search) | Product Detail | 1 credit/ASIN | Product details |
+| [Google Sheets API](https://console.cloud.google.com) | Spreadsheet | Free | Export |
+
+### Dependencies
+
+| Package | Version | Purpose |
+|---------|:-------:|---------|
+| `streamlit` | ≥1.28 | Dashboard |
+| `pandas` | ≥1.5 | Data analysis |
+| `serpapi` | ≥0.1 | Amazon API |
+| `requests` | ≥2.28 | HTTP client |
 | `gspread` | ≥5.0 | Google Sheets |
-| `google-auth` | ≥2.0 | توثيق Google |
+| `google-auth` | ≥2.0 | Google auth |
 
 ---
 
-## 🔗 طرق الربط والتكامل
+## 🔗 Integration
 
 ### 1. Google Sheets Export
 
 ```bash
-python main.py "بحث" --sheet-id "1abc..."
+python main.py "query" --sheet-id "1abc..."
 ```
 
-**التحضير:**
-1. حساب خدمة في [Google Cloud Console](https://console.cloud.google.com)
-2. تفعيل Google Sheets API
-3. رفع `credentials.json` في جذر المشروع
+**Setup:**
+1. Service account in [Google Cloud Console](https://console.cloud.google.com)
+2. Enable Google Sheets API
+3. Place `credentials.json` in project root
 
-### 2. PyInstaller (تطبيق مستقل)
+### 2. PyInstaller (Standalone EXE)
 
 ```bash
 pip install pyinstaller
 pyinstaller build.spec
 ```
 
-| الملف | الوصف |
-|-------|-------|
-| `dist/KDP_Pipeline.exe` | بدون نافذة أوامر |
-| `dist/KDP_Pipeline_DEBUG.exe` | مع نافذة أوامر للتصحيح |
+| File | Description |
+|------|-------------|
+| `dist/KDP_Pipeline.exe` | No console window |
+| `dist/KDP_Pipeline_DEBUG.exe` | With console for debugging |
 
 ### 3. SerpApi Integration
 
 ```
-Dashboard Settings ← .env ← متغير البيئة
+Dashboard Settings ← .env ← environment variable
 ```
 
 ---
 
-## 📁 هيكل المشروع
+## 📁 Project Structure
 
 ```
 KDP-Research-Pipeline/
 │
 ├── app.py                        # Streamlit Dashboard 🖥️
 ├── main.py                       # CLI Pipeline ▶️
-├── requirements.txt              # الاعتماديات 📦
+├── requirements.txt              # Dependencies 📦
 ├── build.spec                    # PyInstaller 🏗️
 ├── config.json                   # API safety lock 🔒
 ├── .env                          # SerpApi key (gitignored) 🔑
-├── .env.example                  # قالب الإعدادات 📝
+├── .env.example                  # Settings template 📝
 ├── .gitignore
 ├── README.md
 │
-├── core/                         # ⭐ الحزمة الأساسية
-│   ├── __init__.py               # تصدير الحزمة
-│   ├── scraper.py                # التجميع من أمازون 🕷️
-│   ├── analyzer.py               # التحليل والتسجيل 🧠
-│   ├── exporter.py               # التصدير لـ Google Sheets 📤
+├── core/                         # ⭐ Core package
+│   ├── __init__.py               # Package exports
+│   ├── scraper.py                # Amazon data fetching 🕷️
+│   ├── analyzer.py               # Scoring + analysis 🧠
+│   ├── exporter.py               # Google Sheets export 📤
 │   ├── database.py               # SQLite 🗄️
-│   └── config_manager.py         # إدارة الإعدادات ⚙️
+│   └── config_manager.py         # Settings management ⚙️
 │
-├── src/                          # الإصدار القديم (احتياطي)
+├── src/                          # Legacy (backup)
 │   ├── scraper.py
 │   ├── analyzer.py
 │   └── exporter.py
 │
-├── manuscript-*.md               # 8 ملفات مخطوطة (68 وصفة) 📖
-├── system-prompt-kdp.md          # دليل الخبير KDP 📋
-├── multi-agent-full-pipeline.md  # 33 وكيل ذكي 🤖
-├── multi-agent-niche-research.md # 6 وكلاء أبحاث 🔬
-├── memory-repository.md          # مستودع الذاكرة 🧠
-├── project_state.json            # حالة المشروع 📊
+├── manuscript-*.md               # 8 manuscript files (68 recipes) 📖
+├── system-prompt-kdp.md          # KDP expert system prompt 📋
+├── multi-agent-full-pipeline.md  # 33-agent pipeline 🤖
+├── multi-agent-niche-research.md # 6-agent niche research 🔬
+├── memory-repository.md          # Baseline memory 🧠
+├── project_state.json            # Pipeline state 📊
 │
 ├── database/                     # SQLite (gitignored)
-├── output/                       # نتائج (gitignored)
+├── output/                       # Results (gitignored)
 └── .streamlit/
-    └── config.toml               # ثيم داكن 🌙
+    └── config.toml               # Dark theme 🌙
 ```
 
 ---
 
-## 🔄 خارطة الطريق
+## 🔄 Roadmap
 
 - [x] **Phase 1:** Niche Research — Market Scanner + Gem Detector
 - [x] **Phase 2:** Content Creation — 33,879-word manuscript
@@ -519,13 +519,13 @@ KDP-Research-Pipeline/
 
 ---
 
-## 📜 الترخيص
+## 📜 License
 
-**MIT License** — استخدم، عدل، وزع بحرية.
+**MIT License** — Use, modify, and distribute freely.
 
 ---
 
 <p align="center">
-  تم التطوير بواسطة <a href="https://github.com/saiedpod-bot">saiedpod-bot</a> 🛠️<br>
-  <sub>آخر تحديث: يونيو 2026</sub>
+  Built by <a href="https://github.com/saiedpod-bot">saiedpod-bot</a> 🛠️<br>
+  <sub>Last updated: June 2026</sub>
 </p>
