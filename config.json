@@ -1,0 +1,7 @@
+{
+  "system_version": "1.0",
+  "allow_api_execution": false,
+  "api_safety": "DORMANT",
+  "last_updated": "2026-06-26",
+  "notes": "API execution is locked. Set allow_api_execution to true only after user explicitly grants permission and verifies prompts."
+}

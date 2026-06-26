@@ -1,0 +1,13 @@
+{
+  "current_step": null,
+  "niche": null,
+  "status": "IDLE",
+  "history": [],
+  "last_updated": "2026-06-26",
+  "steps": {
+    "1_research": { "status": "pending", "output_file": "raw_data.json" },
+    "2_compliance": { "status": "pending", "output_file": null },
+    "3_prompt_generation": { "status": "pending", "output_file": "final_prompts.txt" },
+    "4_design": { "status": "locked", "output_file": null, "api_required": true }
+  }
+}
