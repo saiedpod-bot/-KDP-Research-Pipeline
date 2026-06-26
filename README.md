@@ -2,6 +2,7 @@
   <img src="https://img.shields.io/badge/KDP-Research_Pipeline-blue?style=for-the-badge&logo=amazon" alt="KDP Research Pipeline">
   <img src="https://img.shields.io/badge/Python-3.9+-yellow?style=for-the-badge&logo=python" alt="Python">
   <img src="https://img.shields.io/badge/Streamlit-1.28+-red?style=for-the-badge&logo=streamlit" alt="Streamlit">
+  <img src="https://img.shields.io/badge/Docker-ready-blue?style=for-the-badge&logo=docker" alt="Docker">
   <br>
   <strong>🛰️ Full-stack niche validation platform for Kindle Direct Publishing</strong>
   <br>
@@ -474,6 +475,8 @@ KDP-Research-Pipeline/
 ├── build.spec                    # PyInstaller 🏗️
 ├── config.json                   # API safety lock 🔒
 ├── .env                          # SerpApi key (gitignored) 🔑
+├── Dockerfile                    # Container image 🐳
+├── .dockerignore                 # Docker exclusions 🚫
 ├── .env.example                  # Settings template 📝
 ├── .gitignore
 ├── README.md
@@ -516,6 +519,104 @@ KDP-Research-Pipeline/
 - [ ] **Phase 6:** Listing Optimization (Title, Description, A+)
 - [ ] **Phase 7:** Amazon Ads Campaigns
 - [ ] **Phase 8:** Launch Strategy + Post-Launch Monitoring
+
+---
+
+## 📦 GitHub Packages
+
+### Docker Image (ghcr.io)
+
+Published to **GitHub Container Registry** on every release.
+
+| Image | Description |
+|-------|-------------|
+| `ghcr.io/saiedpod-bot/-kdp-research-pipeline:latest` | Latest stable build |
+| `ghcr.io/saiedpod-bot/-kdp-research-pipeline:<version>` | Versioned (e.g. `v1.0.0`) |
+
+#### Pull & Run
+
+```bash
+# Pull the image
+docker pull ghcr.io/saiedpod-bot/-kdp-research-pipeline:latest
+
+# Run the Streamlit dashboard
+docker run -p 8501:8501 \
+  -e SERPAPI_KEY=your_key_here \
+  ghcr.io/saiedpod-bot/-kdp-research-pipeline:latest
+```
+
+Open [http://localhost:8501](http://localhost:8501) in your browser.
+
+#### Docker Compose
+
+```yaml
+version: "3.8"
+services:
+  kdp-pipeline:
+    image: ghcr.io/saiedpod-bot/-kdp-research-pipeline:latest
+    ports:
+      - "8501:8501"
+    environment:
+      - SERPAPI_KEY=${SERPAPI_KEY}
+    volumes:
+      - ./database:/app/database
+      - ./output:/app/output
+```
+
+```bash
+docker compose up
+```
+
+#### Run CLI commands inside the container
+
+```bash
+docker run --rm \
+  -e SERPAPI_KEY=your_key_here \
+  ghcr.io/saiedpod-bot/-kdp-research-pipeline:latest \
+  streamlit run app.py
+```
+
+### 🔐 Secrets Management (CI/CD)
+
+No tokens are hardcoded anywhere. All sensitive values are stored as **GitHub Repository Secrets**:
+
+| Secret | Used In | Purpose |
+|--------|---------|---------|
+| `GITHUB_TOKEN` | `publish.yml` (auto-injected) | Authenticate Docker push to ghcr.io |
+
+**Required for local use:**
+
+| Credential | Where to Set | How to Obtain |
+|------------|-------------|---------------|
+| `SERPAPI_KEY` | `.env` file or Dashboard Settings | [serpapi.com](https://serpapi.com) |
+| `GOOGLE_APPLICATION_CREDENTIALS` | `.env` file | [Google Cloud Console](https://console.cloud.google.com) |
+
+#### Setting Repository Secrets
+
+1. Go to **GitHub repo → Settings → Secrets and variables → Actions**
+2. Click **New repository secret**
+3. Add `SERPAPI_KEY` with your SerpApi key (for CI tests if needed)
+4. The `GITHUB_TOKEN` secret is automatically available to all workflows
+
+#### CI/CD Workflows
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | Push / PR to `master` | Lint + import validation |
+| `publish.yml` | Release published | Build + push Docker image to ghcr.io |
+
+### 🔄 Publishing a New Release
+
+1. Tag and create a release on GitHub:
+
+```bash
+# From local repo
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+2. On GitHub: **Releases → Draft a new release** → select tag → publish
+3. `publish.yml` auto-builds and pushes the Docker image to `ghcr.io`
 
 ---
 
