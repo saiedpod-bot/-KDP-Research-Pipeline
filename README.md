@@ -530,19 +530,19 @@ Published to **GitHub Container Registry** on every release.
 
 | Image | Description |
 |-------|-------------|
-| `ghcr.io/saiedpod-bot/-kdp-research-pipeline:latest` | Latest stable build |
-| `ghcr.io/saiedpod-bot/-kdp-research-pipeline:<version>` | Versioned (e.g. `v1.0.0`) |
+| `ghcr.io/saiedpod-bot/kdp-research-pipeline:latest` | Latest stable build |
+| `ghcr.io/saiedpod-bot/kdp-research-pipeline:<version>` | Versioned (e.g. `v1.0.0`) |
 
 #### Pull & Run
 
 ```bash
 # Pull the image
-docker pull ghcr.io/saiedpod-bot/-kdp-research-pipeline:latest
+docker pull ghcr.io/saiedpod-bot/kdp-research-pipeline:latest
 
 # Run the Streamlit dashboard
 docker run -p 8501:8501 \
   -e SERPAPI_KEY=your_key_here \
-  ghcr.io/saiedpod-bot/-kdp-research-pipeline:latest
+  ghcr.io/saiedpod-bot/kdp-research-pipeline:latest
 ```
 
 Open [http://localhost:8501](http://localhost:8501) in your browser.
@@ -553,7 +553,7 @@ Open [http://localhost:8501](http://localhost:8501) in your browser.
 version: "3.8"
 services:
   kdp-pipeline:
-    image: ghcr.io/saiedpod-bot/-kdp-research-pipeline:latest
+    image: ghcr.io/saiedpod-bot/kdp-research-pipeline:latest
     ports:
       - "8501:8501"
     environment:
@@ -572,7 +572,7 @@ docker compose up
 ```bash
 docker run --rm \
   -e SERPAPI_KEY=your_key_here \
-  ghcr.io/saiedpod-bot/-kdp-research-pipeline:latest \
+  ghcr.io/saiedpod-bot/kdp-research-pipeline:latest \
   streamlit run app.py
 ```
 

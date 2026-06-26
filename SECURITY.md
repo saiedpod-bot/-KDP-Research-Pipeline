@@ -67,7 +67,7 @@ When running the Docker image, pass credentials via environment variables:
 ```bash
 docker run -p 8501:8501 \
   -e SERPAPI_KEY=your_key_here \
-  ghcr.io/saiedpod-bot/-kdp-research-pipeline:latest
+  ghcr.io/saiedpod-bot/kdp-research-pipeline:latest
 ```
 
 For Docker Compose, use an `.env` file (gitignored):
@@ -76,7 +76,7 @@ For Docker Compose, use an `.env` file (gitignored):
 # docker-compose.yml
 services:
   kdp-pipeline:
-    image: ghcr.io/saiedpod-bot/-kdp-research-pipeline:latest
+    image: ghcr.io/saiedpod-bot/kdp-research-pipeline:latest
     env_file: .env
 ```
 
