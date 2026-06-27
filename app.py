@@ -191,6 +191,8 @@ def run_pipeline_dashboard(
     use_pandas: bool = True,
     api_key: Optional[str] = None,
     filter_params: Optional[Dict[str, str]] = None,
+    enrich_bsr: bool = False,
+    max_enrich: int = 20,
 ) -> Dict[str, Any]:
     """
     Execute the 3-tier pipeline and return results as a dict.
@@ -273,6 +275,28 @@ def run_pipeline_dashboard(
     results["opportunity_count"] = len(ranked_rows)
     results["ranked_rows"] = ranked_rows
     stash_log(f"Stage 2 complete — {len(ranked_rows)} opportunities scored.")
+
+    # -- BSR Enrichment (optional, costs credits) ---------------------------
+    if enrich_bsr:
+        st.session_state["stage_bsr_status"] = "running"
+        stash_log(
+            f"BSR enrichment: fetching real BSR for up to {max_enrich} ASIN(s) "
+            f"(~{max_enrich} SerpApi credits)..."
+        )
+        try:
+            ranked_rows = scraper.batch_enrich_bsr(
+                rows=ranked_rows,
+                api_key=api_key or scraper.SERPAPI_KEY,
+                max_asins=max_enrich,
+                domain=scraper.AMAZON_DOMAIN,
+                delay=1.0,
+            )
+            results["ranked_rows"] = ranked_rows
+            stash_log("BSR enrichment complete.")
+            st.session_state["stage_bsr_status"] = "success"
+        except Exception as exc:
+            stash_log(f"BSR enrichment failed: {exc}")
+            st.session_state["stage_bsr_status"] = "failed"
 
     # -- Gems --------------------------------------------------------------
     try:
@@ -398,6 +422,29 @@ with st.sidebar:
     if new_release:
         filter_params["rh"] = "p_n_publication_date:1250226011"
 
+    st.markdown("### BSR Enrichment")
+    enrich_bsr = st.checkbox(
+        "Enrich with BSR (costs credits)",
+        value=st.session_state.get("enrich_bsr", False),
+        help="Fetch real Best Sellers Rank via Product API (1 credit per ASIN). "
+             "Enable only for focused analysis.",
+    )
+    st.session_state["enrich_bsr"] = enrich_bsr
+    if enrich_bsr:
+        max_enrich = st.number_input(
+            "Max ASINs to enrich",
+            min_value=1,
+            max_value=100,
+            value=20,
+            help="Limits credit consumption. 20 ASINs = 20 SerpApi credits.",
+        )
+        st.session_state["max_enrich"] = max_enrich
+        st.markdown(
+            "<div style='font-size:0.78rem;color:#FF9800;margin-bottom:4px;'>"
+            ":warning: Uses 1 credit per ASIN</div>",
+            unsafe_allow_html=True,
+        )
+
     st.markdown("---")
     key_status = "configured" if config_manager.get_serpapi_key() != "YOUR_SERPAPI_KEY_HERE" else "MISSING"
     st.markdown(
@@ -422,6 +469,8 @@ if "stage2_status" not in st.session_state:
     st.session_state["stage2_status"] = "pending"
 if "stage3_status" not in st.session_state:
     st.session_state["stage3_status"] = "pending"
+if "stage_bsr_status" not in st.session_state:
+    st.session_state["stage_bsr_status"] = "pending"
 if "pipeline_results" not in st.session_state:
     st.session_state["pipeline_results"] = None
 if "pipeline_running" not in st.session_state:
@@ -621,6 +670,8 @@ with tab_dash:
             use_pandas=True,
             api_key=api_key,
             filter_params=filter_params,
+            enrich_bsr=st.session_state.get("enrich_bsr", False),
+            max_enrich=st.session_state.get("max_enrich", 20),
         )
         elapsed = time.time() - start_t
 

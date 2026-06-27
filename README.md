@@ -164,6 +164,13 @@ python main.py "adhd planner" --max-pages 5 --sheet-id "1abc123..."
 | `--max-pages` | int | 3 | Pages to fetch (20-50 products each) |
 | `--min-price` | float | 5.00 | Minimum price filter |
 | `--sheet-id` | str | — | Google Sheet ID for export |
+| `--enrich-bsr` | flag | off | Fetch real BSR via Product API (1 credit/ASIN) |
+| `--max-enrich` | int | 20 | Max ASINs to enrich with BSR |
+
+```bash
+# Deep scan + BSR enrichment (costs credits)
+python main.py "low fodmap cookbook" --max-pages 3 --enrich-bsr --max-enrich 15
+```
 
 | Depth | Command | Results | Best For |
 |-------|---------|---------|----------|

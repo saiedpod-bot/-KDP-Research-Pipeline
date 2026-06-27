@@ -16,6 +16,7 @@ Author: KDP Automation Architect
 
 import os
 import sys
+import re
 import json
 import time
 import logging
@@ -1079,6 +1080,187 @@ def _merge_organic(
         if asin and asin not in seen:
             seen.add(asin)
             target.append(item)
+
+
+# ---------------------------------------------------------------------------
+# BSR Enrichment — fetch real BSR from Product API (costs 1 credit/ASIN)
+# ---------------------------------------------------------------------------
+def extract_bsr_from_product_details(
+    details: Dict[str, Any],
+) -> Optional[int]:
+    """
+    Extract the Best Sellers Rank (BSR) from a SerpApi Product API response.
+
+    The response can nest BSR in several locations; this function tries
+    each in priority order:
+
+      1. ``product_information.sellers[*].rank``  (first seller with a rank)
+      2. ``product_information.sales_rank``        (direct numeric field)
+      3. ``product_information.rank``              (alternative key)
+      4. ``product_information.best_sellers_rank`` (verbose key)
+
+    Parameters
+    ----------
+    details : dict
+        Raw response from ``fetch_product_details()``.
+
+    Returns
+    -------
+    int or None
+        The numeric BSR value, or None if not found.
+    """
+    try:
+        pi = details.get("product_information") or {}
+    except Exception:
+        pi = {}
+
+    # Priority 1: seller rank (e.g. #12,345 in Books)
+    try:
+        sellers = pi.get("sellers", [])
+        if isinstance(sellers, list):
+            for seller in sellers:
+                raw = seller.get("rank")
+                if raw is not None:
+                    val = _clean_bsr(raw)
+                    if val is not None:
+                        return val
+    except Exception:
+        pass
+
+    # Priority 2-4: direct fields
+    for key in ("sales_rank", "rank", "best_sellers_rank"):
+        try:
+            raw = pi.get(key)
+            if raw is not None:
+                val = _clean_bsr(raw)
+                if val is not None:
+                    return val
+        except Exception:
+            continue
+
+    return None
+
+
+def _clean_bsr(raw: Any) -> Optional[int]:
+    """
+    Convert a raw BSR value (string or int) to a clean integer.
+
+    Handles formats like:
+      - "#12,345 in Books"
+      - "12,345"
+      - 12345
+    """
+    try:
+        if isinstance(raw, (int, float)):
+            return int(raw)
+        s = str(raw).replace(",", "").strip()
+        # Extract the first number found
+        import re
+        match = re.search(r"#?(\d+)", s)
+        if match:
+            return int(match.group(1))
+        # Fallback: try parsing the whole string
+        if s and s.replace(" ", "").isdigit():
+            return int(s)
+    except Exception:
+        pass
+    return None
+
+
+def enrich_row_with_bsr(
+    row: Dict[str, Any],
+    api_key: str,
+    domain: str = AMAZON_DOMAIN,
+) -> Dict[str, Any]:
+    """
+    Fetch BSR for a single product row and return the updated row.
+
+    Uses the SerpApi ``amazon_product`` endpoint (1 credit per call).
+
+    Parameters
+    ----------
+    row : dict
+        A formatted product row (must contain ``ASIN``).
+    api_key : str
+        Valid SerpApi key.
+    domain : str
+        Amazon marketplace domain.
+
+    Returns
+    -------
+    dict
+        The same row with ``BSR`` field updated if data was found.
+    """
+    asin = row.get("ASIN", "")
+    if not asin or asin == "N/A":
+        return row
+
+    details = fetch_product_details(asin, api_key, domain)
+    if not details:
+        return row
+
+    bsr = extract_bsr_from_product_details(details)
+    if bsr is not None:
+        row["BSR"] = bsr
+        logger.info("BSR for %s → %d", asin, bsr)
+    else:
+        logger.info("No BSR found for %s (BSR stays 0)", asin)
+
+    return row
+
+
+def batch_enrich_bsr(
+    rows: List[Dict[str, Any]],
+    api_key: str,
+    max_asins: Optional[int] = None,
+    domain: str = AMAZON_DOMAIN,
+    delay: float = 1.0,
+) -> List[Dict[str, Any]]:
+    """
+    Enrich a list of product rows with real BSR values from the Product API.
+
+    Costs **1 SerpApi credit per ASIN** enriched. Use *max_asins* to
+    limit total cost (e.g. 20 → 20 credits).
+
+    Parameters
+    ----------
+    rows : list[dict]
+        Formatted product rows (must contain ``ASIN``).
+    api_key : str
+        Valid SerpApi key.
+    max_asins : int, optional
+        Maximum number of ASINs to enrich. ``None`` = enrich all.
+    domain : str
+        Amazon marketplace domain.
+    delay : float
+        Seconds between API calls to avoid rate limits.
+
+    Returns
+    -------
+    list[dict]
+        Rows with updated ``BSR`` values.
+    """
+    target = rows[:max_asins] if max_asins else rows
+    skipped = rows[len(target):] if max_asins else []
+
+    logger.info(
+        "BSR enrichment: %d ASIN(s) (%.1f credits total @ 1/ASIN)",
+        len(target), len(target),
+    )
+
+    for i, row in enumerate(target):
+        updated = enrich_row_with_bsr(row, api_key, domain)
+        target[i] = updated
+        if i < len(target) - 1:
+            time.sleep(delay)
+
+    result = target + skipped
+    enriched = sum(1 for r in result if r.get("BSR", 0) > 0)
+    logger.info(
+        "BSR enrichment complete — %d/%d rows enriched.",
+        enriched, len(rows),
+    )
+    return result
 
 
 # ---------------------------------------------------------------------------

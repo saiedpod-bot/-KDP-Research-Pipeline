@@ -64,6 +64,8 @@ def run_pipeline(
     min_price: float = 5.00,
     use_pandas: bool = True,
     max_pages: int = 1,
+    enrich_bsr: bool = False,
+    max_enrich: int = 20,
 ) -> bool:
     """
     Execute the full KDP research pipeline: scrape -> analyze -> export.
@@ -167,6 +169,32 @@ def run_pipeline(
 
     n_opportunities: int = len(ranked_rows)
     logger.info("Analyzer stage complete -- %d opportunities scored.", n_opportunities)
+
+    # -- BSR Enrichment (optional, costs credits) --------------------------
+    if enrich_bsr:
+        logger.info("")
+        logger.info("-" * 60)
+        logger.info("BSR ENRICHMENT -- fetching real BSR via Product API")
+        logger.info("-" * 60)
+        logger.info(
+            "Enriching up to %d ASIN(s) — costs ~%d SerpApi credit(s).",
+            max_enrich, max_enrich,
+        )
+        try:
+            ranked_rows = scraper.batch_enrich_bsr(
+                rows=ranked_rows,
+                api_key=scraper.SERPAPI_KEY,
+                max_asins=max_enrich,
+                domain=scraper.AMAZON_DOMAIN,
+                delay=1.0,
+            )
+            n_enriched = sum(1 for r in ranked_rows if r.get("BSR", 0) > 0)
+            logger.info(
+                "BSR enrichment complete — %d/%d rows have real BSR.",
+                n_enriched, min(max_enrich, len(ranked_rows)),
+            )
+        except Exception as exc:
+            logger.warning("BSR enrichment failed: %s", exc)
 
     # -- Low-Competition Gems analysis (DataFrame variant when pandas available) --
     gems: List[Dict[str, Any]] = []
@@ -348,6 +376,17 @@ if __name__ == "__main__":
         action="store_true",
         help="Force pure-Python scoring (skip Pandas even if installed)",
     )
+    parser.add_argument(
+        "--enrich-bsr",
+        action="store_true",
+        help="Fetch real Best Sellers Rank via Product API (costs 1 credit per ASIN)",
+    )
+    parser.add_argument(
+        "--max-enrich",
+        type=int,
+        default=20,
+        help="Maximum ASINs to enrich with BSR (default: 20, costs 1 credit each)",
+    )
 
     args = parser.parse_args()
 
@@ -359,6 +398,8 @@ if __name__ == "__main__":
             min_price=args.min_price,
             use_pandas=not args.no_pandas,
             max_pages=args.max_pages,
+            enrich_bsr=args.enrich_bsr,
+            max_enrich=args.max_enrich,
         )
     except KeyboardInterrupt:
         logger.warning("Pipeline terminated by user.")
