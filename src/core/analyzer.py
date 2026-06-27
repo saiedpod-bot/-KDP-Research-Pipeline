@@ -845,6 +845,311 @@ def get_niche_insights(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
+# Niche Scoring Intelligence Module — Market Quality Score (0–100)
+# ---------------------------------------------------------------------------
+# Weights:
+#   Demand (35%)       — BSR / Review Velocity / Review Count fallback
+#   Competition (30%)  — median review count of top 10 (lower = better)
+#   Pricing (15%)      — closeness to $5.99–$9.99 sweet spot
+#   Indie/Recency (10%)— recent pub date + indie author signals
+#   Dominance (-25%)   — penalty if top 3 hold > 60% of reviews/revenue
+# ---------------------------------------------------------------------------
+
+
+def _estimate_demand_score(competitors: List[Dict[str, Any]]) -> float:
+    """
+    Demand sub-score (0–100) based on BSR or review velocity.
+
+    Strategy:
+      1. If >= 50% of products have BSR > 0, use BSR-based score.
+      2. Else fallback to review-count-based score.
+    """
+    bsr_values = [c.get("BSR", 0) or 0 for c in competitors if c.get("BSR", 0) or 0 > 0]
+    if bsr_values and len(bsr_values) >= len(competitors) * 0.5:
+        avg_bsr = sum(bsr_values) / len(bsr_values)
+        # BSR model: lower BSR = higher demand
+        # BSR 1 → 100, BSR 100k → 0
+        score = max(0, 100 - (avg_bsr / 1000))
+        return round(min(score, 100), 1)
+
+    # Fallback: review count as demand proxy
+    review_counts = [
+        c.get("ReviewCount", 0) or 0
+        for c in competitors
+        if c.get("ReviewCount", 0) or 0 > 0
+    ]
+    if review_counts:
+        avg_reviews = sum(review_counts) / len(review_counts)
+        # 0 reviews → 0, 1000+ reviews → 100
+        score = min(avg_reviews / 10, 100)
+        return round(score, 1)
+
+    return 10.0  # very low signal, slight positive for untested niche
+
+
+def _estimate_competition_score(competitors: List[Dict[str, Any]]) -> float:
+    """
+    Competition sub-score (0–100) based on median review count of top 10.
+
+    Lower median reviews = less competition = higher score.
+
+    Calibration:
+      median <= 10   → 100 (blue ocean)
+      median <= 50   → 85
+      median <= 100  → 70
+      median <= 300  → 50
+      median <= 1000 → 30
+      median > 1000  → 10
+    """
+    top10 = competitors[:10]
+    review_counts = sorted([
+        c.get("ReviewCount", 0) or 0
+        for c in top10
+    ])
+    if not review_counts:
+        return 50.0
+
+    mid = len(review_counts) // 2
+    median = review_counts[mid] if len(review_counts) % 2 else (review_counts[mid - 1] + review_counts[mid]) / 2
+
+    if median <= 10:
+        return 100.0
+    if median <= 50:
+        return 85.0
+    if median <= 100:
+        return 70.0
+    if median <= 300:
+        return 50.0
+    if median <= 1000:
+        return 30.0
+    return 10.0
+
+
+def _estimate_pricing_score(competitors: List[Dict[str, Any]]) -> float:
+    """
+    Pricing sub-score (0–100) based on proximity to $5.99–$9.99 sweet spot.
+
+    Scores how many products fall in the KDP sweet-spot price range.
+    """
+    prices = [
+        c.get("Price", 0) or 0
+        for c in competitors
+        if (c.get("Price", 0) or 0) > 0
+    ]
+    if not prices:
+        return 30.0
+
+    in_sweet_spot = sum(1 for p in prices if 5.99 <= p <= 9.99)
+    ratio = in_sweet_spot / len(prices)
+
+    avg_price = sum(prices) / len(prices)
+    price_penalty = 0.0
+    if avg_price < 5.99:
+        price_penalty = 10.0
+    elif avg_price > 15.0:
+        price_penalty = 20.0
+
+    score = (ratio * 100) - price_penalty
+    return round(max(0, min(score, 100)), 1)
+
+
+def _estimate_recency_bonus(competitors: List[Dict[str, Any]]) -> float:
+    """
+    Indie/Recency bonus sub-score (0–100).
+
+    Awards points for:
+      - Products with recent publication dates (last 2 years).
+      - Authors that appear to be indie (no corporate suffixes).
+    """
+    from datetime import datetime
+    current_year = datetime.now().year
+
+    recent_count = 0
+    indie_count = 0
+    total = len(competitors) or 1
+
+    corporate_indicators = {"inc", "llc", "ltd", "press", "publishing", "house", "studio", "media", "group", "corporation", "enterprises"}
+
+    for c in competitors:
+        pub = c.get("PublicationDate", "")
+        if pub:
+            try:
+                # Try to extract year
+                year = None
+                if len(pub) == 4 and pub.isdigit():
+                    year = int(pub)
+                elif "-" in pub:
+                    year = int(pub.split("-")[0])
+                if year and year >= current_year - 2:
+                    recent_count += 1
+            except (ValueError, IndexError):
+                pass
+
+        author = str(c.get("Author", "")).lower()
+        if author and author != "unknown":
+            words = set(author.replace(",", "").split())
+            if not words & corporate_indicators:
+                indie_count += 1
+
+    recent_ratio = recent_count / total
+    indie_ratio = indie_count / total
+
+    score = (recent_ratio * 60) + (indie_ratio * 40)
+    return round(min(score, 100), 1)
+
+
+def _estimate_dominance_penalty(competitors: List[Dict[str, Any]]) -> float:
+    """
+    Dominance penalty (0–25) subtracted from total score.
+
+    If top 3 products hold > 60% of total reviews → apply penalty.
+    Penalty scales linearly from 0 (at 60%) to 25 (at 100%).
+
+    Skips penalty when too few competitors exist (< 4 products),
+    as concentration is meaningless with limited data.
+    """
+    if len(competitors) < 4:
+        return 0.0
+
+    review_counts = [
+        c.get("ReviewCount", 0) or 0
+        for c in competitors
+    ]
+    total_reviews = sum(review_counts)
+    if total_reviews <= 0:
+        return 0.0
+
+    top3_reviews = sum(sorted(review_counts, reverse=True)[:3])
+    concentration = top3_reviews / total_reviews
+
+    if concentration <= 0.60:
+        return 0.0
+    penalty = ((concentration - 0.60) / 0.40) * 25
+    return round(min(penalty, 25), 1)
+
+
+def calculate_niche_score(
+    competitors_data: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """
+    Compute the Market Quality Score (0–100) for a niche.
+
+    Parameters
+    ----------
+    competitors_data : list[dict]
+        Product rows from the scraper. Each dict should contain:
+        ASIN, Title, Author, Price, BSR, ReviewCount, Rating, PublicationDate.
+
+    Returns
+    -------
+    dict with keys:
+        total_score       — Market Quality Score (0–100)
+        verdict           — label from get_niche_verdict()
+        signals: {
+            demand_score,
+            competition_score,
+            pricing_score,
+            recency_bonus,
+            dominance_penalty,
+        }
+        weights: {
+            demand_weight,
+            competition_weight,
+            pricing_weight,
+            recency_weight,
+            dominance_weight,
+        }
+        contribution: {
+            demand_contrib,
+            competition_contrib,
+            pricing_contrib,
+            recency_contrib,
+            dominance_contrib,
+        }
+        product_count,
+    """
+    if not competitors_data:
+        return {
+            "total_score": 0,
+            "verdict": "Insufficient Data",
+            "signals": {},
+            "weights": {},
+            "contribution": {},
+            "product_count": 0,
+        }
+
+    # Weights
+    weights = {
+        "demand": 0.35,
+        "competition": 0.30,
+        "pricing": 0.15,
+        "recency": 0.10,
+        "dominance": -0.25,
+    }
+
+    # Raw signals (each 0–100)
+    demand = _estimate_demand_score(competitors_data)
+    competition = _estimate_competition_score(competitors_data)
+    pricing = _estimate_pricing_score(competitors_data)
+    recency = _estimate_recency_bonus(competitors_data)
+    penalty = _estimate_dominance_penalty(competitors_data)
+
+    signals = {
+        "demand_score": demand,
+        "competition_score": competition,
+        "pricing_score": pricing,
+        "recency_bonus": recency,
+        "dominance_penalty": penalty,
+    }
+
+    # Weighted contributions
+    contribution = {
+        "demand_contrib": round(demand * weights["demand"], 2),
+        "competition_contrib": round(competition * weights["competition"], 2),
+        "pricing_contrib": round(pricing * weights["pricing"], 2),
+        "recency_contrib": round(recency * weights["recency"], 2),
+        "dominance_contrib": round(-penalty * abs(weights["dominance"]), 2),
+    }
+
+    total_score = sum(contribution.values())
+    total_score = round(max(0, min(total_score, 100)), 1)
+
+    return {
+        "total_score": total_score,
+        "verdict": get_niche_verdict(total_score),
+        "signals": signals,
+        "weights": weights,
+        "contribution": contribution,
+        "product_count": len(competitors_data),
+    }
+
+
+def get_niche_verdict(score: float) -> str:
+    """
+    Map a numeric Market Quality Score to a human-readable verdict band.
+
+    Bands:
+      Excellent: 85+
+      Great:     70+
+      Good:      55+
+      Okay:      40+
+      Weak:      25+
+      Poor:      <25
+    """
+    if score >= 85:
+        return "Excellent"
+    if score >= 70:
+        return "Great"
+    if score >= 55:
+        return "Good"
+    if score >= 40:
+        return "Okay"
+    if score >= 25:
+        return "Weak"
+    return "Poor"
+
+
+# ---------------------------------------------------------------------------
 # Empty-Result Diagnostics & Query Broadening
 # ---------------------------------------------------------------------------
 _COMMON_STOP_WORDS: set = {

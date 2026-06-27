@@ -1225,6 +1225,38 @@ def _display_results(results: Optional[Dict[str, Any]], query: str, sheet_id: st
             unsafe_allow_html=True,
         )
 
+    # -- Market Gauge: Niche Scoring Intelligence -----------------------------
+    if ranked_rows:
+        niche_score = analyzer.calculate_niche_score(ranked_rows)
+        st.markdown("### :bar_chart: Market Gauge — Niche Quality Score")
+
+        gauge_cols = st.columns([3, 2])
+        with gauge_cols[0]:
+            total = niche_score["total_score"]
+            verdict = niche_score["verdict"]
+            color = "#4CAF50" if total >= 70 else "#FF9800" if total >= 40 else "#F44336"
+            st.markdown(
+                f"<div style='text-align:center;padding:12px;'>"
+                f"<div style='font-size:2.8rem;font-weight:800;color:{color};'>{total:.0f}</div>"
+                f"<div style='font-size:1.1rem;color:#aaa;margin-top:-6px;'>{verdict}</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+            st.progress(total / 100)
+
+        with gauge_cols[1]:
+            sig = niche_score["signals"]
+            st.markdown(
+                f"<div style='font-size:0.85rem;'>"
+                f"<div><span style='color:#4CAF50;'>▬</span> Demand: <b>{sig['demand_score']:.0f}</b></div>"
+                f"<div><span style='color:#2196F3;'>▬</span> Competition: <b>{sig['competition_score']:.0f}</b></div>"
+                f"<div><span style='color:#FF9800;'>▬</span> Pricing: <b>{sig['pricing_score']:.0f}</b></div>"
+                f"<div><span style='color:#9C27B0;'>▬</span> Recency Bonus: <b>{sig['recency_bonus']:.0f}</b></div>"
+                f"<div><span style='color:#F44336;'>▬</span> Dominance Penalty: <b>-{sig['dominance_penalty']:.0f}</b></div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
     # -- Score Legend (educational tooltips) ------------------------------------
     with st.expander(":green_book: What do these scores mean?"):
         st.markdown("""
