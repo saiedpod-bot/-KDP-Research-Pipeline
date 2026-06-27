@@ -784,19 +784,42 @@ def _display_gallery(
             # Metadata block
             price = product.get("Price", 0)
             eos = product.get("EOS", 0)
+            vs = product.get("Visibility_Score", 0)
+            theme = product.get("Theme", "—")
+            rating = product.get("Rating", 0)
+            reviews = product.get("ReviewCount", 0)
             pub = product.get("PublicationDate", "—")
             bsr = product.get("BSR", 0)
+
             meta = f"💰 **${float(price):.2f}**" if price else ""
             if eos:
                 meta += f" &nbsp;🚀 **{float(eos):.1f}**"
-            if pub and pub != "N/A" and pub != "—":
-                meta += f" &nbsp;📅 {pub}"
-            if bsr:
-                meta += f" &nbsp;📈 {int(bsr):,}"
-            if meta:
+            if vs:
+                meta += f" &nbsp;📊 **{float(vs):.0f}**"
+            st.markdown(
+                f"<div style='font-size:0.8rem;color:#ccc;"
+                f"margin:2px 0;'>{meta}</div>",
+                unsafe_allow_html=True,
+            )
+
+            meta2 = ""
+            if rating:
+                meta2 += f"⭐ {float(rating):.1f}"
+            if reviews:
+                meta2 += f" &nbsp;💬 {int(reviews)}"
+            if theme and theme != "—":
+                meta2 += f" &nbsp;🏷️ {theme}"
+            if meta2:
                 st.markdown(
-                    f"<div style='font-size:0.78rem;color:#aaa;"
-                    f"margin:2px 0 6px 0;'>{meta}</div>",
+                    f"<div style='font-size:0.75rem;color:#888;"
+                    f"margin:2px 0 6px 0;'>{meta2}</div>",
+                    unsafe_allow_html=True,
+                )
+
+            if pub and pub not in ("N/A", "—", ""):
+                st.markdown(
+                    f"<div style='font-size:0.7rem;color:#666;"
+                    f"margin:0 0 4px 0;'>📅 {pub}</div>",
                     unsafe_allow_html=True,
                 )
 
