@@ -47,11 +47,15 @@
 | 🔍 **3 Search Modes** | Keyword search · URL Tunneling · Product detail |
 | 🧠 **SmartScore** | Opportunity metric combining demand + competition |
 | 💎 **Gold Mine** | High-demand, low-competition product detection |
-| 📊 **Streamlit Dashboard** | 3 tabs · dark theme · Developer Mode toggle |
-| 🗄️ **Local SQLite** | Search history · settings · discovery queue |
+| 📊 **Streamlit Dashboard** | 4 tabs · dark theme · Commercial/Developer Mode toggle |
+| 🗄️ **Local SQLite** | Search history · settings · discovery queue · tunnel results |
 | 🚀 **New Release Mode** | Filter last 30 days only |
 | 🕳️ **Multi-Niche Tunneling** | Paste any Amazon URL to extract data |
 | 🔗 **Smart Discovery** | Auto-extract keywords & niches from ASINs |
+| 🔬 **Deep Niche Tunneling** | One-click competitive density analysis + Golden Niche detection |
+| 🖼️ **Visual Gallery** | 4-column product card grid with thumbnails and EOS scores |
+| 🎯 **Auto-Filter** | Persist last-30-days filter across all searches automatically |
+| 📥 **CSV Export** | Download scored Golden List for offline analysis |
 | 🤖 **33 AI Agents** | Full book pipeline orchestration (8 stages) |
 | 🏗️ **PyInstaller Build** | Standalone `.exe` distribution |
 
@@ -358,6 +362,68 @@ Auto-discover keywords from existing products.
 ✅ Preference auto-saved to SQLite
 ```
 
+### 🖼️ Visual Product Gallery
+
+Browse ranked products in a 4-column card grid with thumbnails, pricing, EOS scores, and direct Amazon links.
+
+![Visual Product Gallery](gallery_screenshot.png)
+
+*Example: Low-FODMAP Cookbooks — 13 products ranked by EOS*
+
+### 🕳️ Deep Niche Tunneling
+
+One-click competitive intelligence for any niche — extracts the category, auto-filters by last-30-days, scores with EOS, and measures market density.
+
+```
+┌─────────────────────────────────────────────────────┐
+│  🔬 Deep Niche Tunneling Workflow                   │
+├─────────────────────────────────────────────────────┤
+│  1. Enter niche query (e.g. "low fodmap cookbook")  │
+│  2. generate_filtered_url() → builds Amazon URL     │
+│     with rh=n:283155,p_n_publication_date:1250226011│
+│  3. deep_tunnel_niche() → fetches filtered results  │
+│  4. find_gems_dataframe() → scores with EOS         │
+│  5. deep_tunnel_niche(filter_type='none') → total   │
+│  6. calculate_competition_score() → density %       │
+│  7. Golden Niche? → density < 30% + VS ≥ 30         │
+└─────────────────────────────────────────────────────┘
+```
+
+#### Competition Density Scoring
+
+| Density | Label | Color | Action |
+|---------|-------|-------|--------|
+| < 10% | Low Density (High Potential) | 🟢 Green | **Enter now** — blue ocean |
+| 10–30% | Moderate Density | 🟡 Yellow | Differentiate strongly |
+| > 30% | Saturated (High Competition) | 🔴 Red | Find sub-niche or pivot |
+
+#### Real Examples
+
+| Query | Filtered | Unfiltered | Density | Verdict |
+|-------|----------|------------|---------|---------|
+| `low fodmap cookbook for kids` | 12 | 55 | **21.8%** | 🟢 **Golden Niche** |
+| `coloring books for adults` | 48 | 60 | **80%** | 🔴 Saturated |
+| `permaculture logbook` | 3 | 18 | **16.7%** | 🟢 **Golden Niche** |
+
+#### Output: Golden List CSV
+
+```
+ASIN,Title,Price,Visibility_Score,EOS,Theme,ReviewCount,Rating,PublicationDate
+B0C...,Permaculture Logbook for Beginners,$12.99,85,142.3,Set,12,4.5,2026-05-01
+...
+```
+
+Click **Export to CSV** in the dashboard to download the scored golden list for offline analysis.
+
+### 🤖 Auto-Filter Toggle
+
+```
+✅ Sidebar checkbox → persists across sessions
+✅ Appends last-30-days filter to every search automatically
+✅ Overrides individual New Release toggle
+✅ Helps maintain consistent competitive awareness
+```
+
 ---
 
 ## 🤖 Multi-Agent Pipeline
@@ -521,11 +587,12 @@ KDP-Research-Pipeline/
 - [x] **Phase 1:** Niche Research — Market Scanner + Gem Detector
 - [x] **Phase 2:** Content Creation — 33,879-word manuscript
 - [x] **Phase 3:** Streamlit Dashboard + SQLite + Discovery Engine
-- [ ] **Phase 4:** Formatting & Layout (Kindle + Paperback)
-- [ ] **Phase 5:** Cover Design (AI-generated)
-- [ ] **Phase 6:** Listing Optimization (Title, Description, A+)
-- [ ] **Phase 7:** Amazon Ads Campaigns
-- [ ] **Phase 8:** Launch Strategy + Post-Launch Monitoring
+- [x] **Phase 4:** Deep Niche Tunneling + Competitive Density Analysis + Visual Gallery
+- [ ] **Phase 5:** Formatting & Layout (Kindle + Paperback)
+- [ ] **Phase 6:** Cover Design (AI-generated)
+- [ ] **Phase 7:** Listing Optimization (Title, Description, A+)
+- [ ] **Phase 8:** Amazon Ads Campaigns
+- [ ] **Phase 9:** Launch Strategy + Post-Launch Monitoring
 
 ---
 
