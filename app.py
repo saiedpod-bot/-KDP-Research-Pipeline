@@ -761,7 +761,7 @@ def _display_gallery(
             # Thumbnail with fallback
             thumb = product.get("thumbnail", "")
             if thumb:
-                st.image(thumb, use_container_width=True)
+                st.image(thumb, use_column_width=True)
             else:
                 st.markdown(
                     "<div style='background:#1a1d24;border-radius:8px;"
