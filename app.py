@@ -12,6 +12,7 @@ import sys
 import json
 import time
 import logging
+import csv
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 from io import StringIO
@@ -197,7 +198,7 @@ def run_pipeline_dashboard(
     """
     Execute the 3-tier pipeline and return results as a dict.
 
-    Yields status strings for the live log as execution progresses.
+    Shows live progress via st.progress() and st.status().
     """
     results: Dict[str, Any] = {
         "scraped_count": 0,
@@ -209,17 +210,27 @@ def run_pipeline_dashboard(
         "error": None,
     }
 
+    progress_bar = st.progress(0, text="Pipeline starting...")
+    status = st.status("Pipeline running...", expanded=True)
+
     # -- Stage 1: Scrape --------------------------------------------------
     st.session_state["stage1_status"] = "running"
     try:
         if max_pages > 1:
             stash_log(f"Batch mode: fetching {max_pages} pages ...")
+            status.update(label=f"Scraping {max_pages} pages...")
+
+            def page_progress(current: int, total: int) -> None:
+                pct = int((current / total) * 55)
+                progress_bar.progress(pct, text=f"Scraping page {current}/{total}...")
+
             scraped_rows = scraper.fetch_all_pages(
                 query=query,
                 max_pages=max_pages,
                 api_key=api_key or scraper.SERPAPI_KEY,
                 domain=scraper.AMAZON_DOMAIN,
                 filter_params=filter_params,
+                progress_callback=page_progress,
             )
             if scraped_rows:
                 scraper.save_results(
@@ -250,31 +261,45 @@ def run_pipeline_dashboard(
 
     results["scraped_count"] = len(scraped_rows)
     stash_log(f"Stage 1 complete — {len(scraped_rows)} products collected.")
+    progress_bar.progress(60, text="Analyzing opportunities...")
+    status.update(label="Analyzing opportunities...")
     st.session_state["stage1_status"] = "success"
 
-    # -- Stage 2: Analyze --------------------------------------------------
+    # -- Stage 2: Analyze (Visibility-Based Opportunity Scoring) ----------
     st.session_state["stage2_status"] = "running"
     try:
-        ranked_rows = analyzer.run_analysis(
-            query=query,
-            min_price=min_price,
-            use_pandas=use_pandas,
-        )
+        import pandas as _pd_analyze
+        df = _pd_analyze.DataFrame(scraped_rows)
+        # Filter low-price before scoring
+        df["Price"] = _pd_analyze.to_numeric(df.get("Price", 0), errors="coerce").fillna(0)
+        df = df[df["Price"] >= min_price].copy()
+        if df.empty:
+            stash_log("No products after price filter. Halting.")
+            st.session_state["stage2_status"] = "failed"
+            results["error"] = "No products above minimum price."
+            return results
+        # Run the opportunity scoring engine
+        processed_df = analyzer.find_gems_dataframe(df)
+        ranked_rows = processed_df.to_dict(orient="records")
+        # Compute low-competition gems from the scored results
+        gems = [
+            r for r in ranked_rows
+            if r.get("ReviewCount", 999) < 30
+        ]
     except Exception as exc:
         stash_log(f"ANALYSIS FAILED: {exc}")
         st.session_state["stage2_status"] = "failed"
         results["error"] = str(exc)
         return results
 
-    if not ranked_rows:
-        stash_log("No opportunities after filtering. Halting.")
-        st.session_state["stage2_status"] = "failed"
-        results["error"] = "No opportunities after price filter."
-        return results
-
     results["opportunity_count"] = len(ranked_rows)
     results["ranked_rows"] = ranked_rows
-    stash_log(f"Stage 2 complete — {len(ranked_rows)} opportunities scored.")
+    results["gems"] = gems
+    results["gem_count"] = len(gems)
+    stash_log(f"Stage 2 complete — {len(ranked_rows)} opportunities scored, {len(gems)} gems.")
+    progress_bar.progress(80, text="Export stage...")
+    status.update(label="Analysis complete.")
+    st.session_state["stage2_status"] = "success"
 
     # -- BSR Enrichment (optional, costs credits) ---------------------------
     if enrich_bsr:
@@ -298,28 +323,11 @@ def run_pipeline_dashboard(
             stash_log(f"BSR enrichment failed: {exc}")
             st.session_state["stage_bsr_status"] = "failed"
 
-    # -- Gems --------------------------------------------------------------
-    try:
-        if analyzer.HAS_PANDAS:
-            import pandas as _pd
-            df = _pd.DataFrame(ranked_rows)
-            gems_df = analyzer.find_gems_dataframe(df)
-            gems = gems_df.to_dict(orient="records") if not gems_df.empty else []
-        else:
-            gems = analyzer.find_low_competition_gems(ranked_rows)
-    except Exception as exc:
-        stash_log(f"Gem analysis fell back: {exc}")
-        gems = analyzer.find_low_competition_gems(ranked_rows)
-
-    results["gems"] = gems
-    results["gem_count"] = len(gems)
-    stash_log(f"Gems identified: {len(gems)} low-competition opportunities.")
-    st.session_state["stage2_status"] = "success"
-
     # -- Stage 3: Export (optional) ----------------------------------------
     st.session_state["stage3_status"] = "running"
     if sheet_id:
         stash_log(f"Exporting {len(ranked_rows)} rows to Sheets ...")
+        status.update(label="Exporting to Google Sheets...")
         try:
             export_ok = exporter.run_export(
                 query=query,
@@ -340,6 +348,8 @@ def run_pipeline_dashboard(
         stash_log("Export skipped (no Sheet ID).")
         st.session_state["stage3_status"] = "skipped"
 
+    progress_bar.progress(100, text="Pipeline complete!")
+    status.update(label="Pipeline complete.", state="complete" if not results["error"] else "error")
     return results
 
 
@@ -347,6 +357,105 @@ def stash_log(msg: str) -> None:
     """Append a message to the live-log buffer in session state."""
     ts = datetime.now().strftime("%H:%M:%S")
     st.session_state["log_messages"].append(f"[{ts}] {msg}")
+
+
+# ---------------------------------------------------------------------------
+# Deep Niche Tunneling — orchestrator
+# ---------------------------------------------------------------------------
+def run_deep_tunnel_dashboard(
+    niche_query: str,
+    api_key: str,
+    max_pages: int = 3,
+) -> Dict[str, Any]:
+    """
+    Execute a Deep Tunnel search: filtered (last 30 days) + unfiltered,
+    score results, compute density, return structured dict.
+
+    Shows live progress via st.status().
+    """
+    result: Dict[str, Any] = {
+        "niche_query": niche_query,
+        "filtered_count": 0,
+        "unfiltered_count": 0,
+        "density_label": "Insufficient Data",
+        "is_golden": False,
+        "filtered_rows": [],
+        "unfiltered_rows": [],
+        "gems": [],
+        "error": None,
+    }
+
+    status = st.status(f"Tunneling Niche: {niche_query}...", expanded=True)
+    progress = st.progress(0, text="Starting deep tunnel...")
+
+    try:
+        # Step 1: Fetch filtered (last 30 days)
+        status.update(label=f"Fetching filtered results for '{niche_query}'...")
+        progress.progress(20, text="Fetching filtered (last 30 days)...")
+        stash_log(f"Deep tunnel: fetching filtered results for '{niche_query}'...")
+        filtered_rows = scraper.deep_tunnel_niche(
+            query=niche_query,
+            api_key=api_key,
+            filter_type='new_30_days',
+            max_pages=max_pages,
+        )
+        result["filtered_count"] = len(filtered_rows)
+        stash_log(f"Deep tunnel: {len(filtered_rows)} filtered products.")
+
+        # Step 2: Score filtered results
+        progress.progress(45, text="Scoring filtered results...")
+        status.update(label="Scoring filtered opportunities...")
+        if filtered_rows:
+            import pandas as _pd_tunnel
+            df_filtered = _pd_tunnel.DataFrame(filtered_rows)
+            df_filtered["Price"] = _pd_tunnel.to_numeric(df_filtered.get("Price", 0), errors="coerce").fillna(0)
+            scored = analyzer.find_gems_dataframe(df_filtered)
+            result["filtered_rows"] = scored.to_dict(orient="records")
+            result["gems"] = [r for r in result["filtered_rows"] if r.get("ReviewCount", 999) < 30]
+
+        # Step 3: Fetch unfiltered (same query, no date filter)
+        progress.progress(65, text="Fetching unfiltered results...")
+        status.update(label="Fetching unfiltered market data...")
+        stash_log("Deep tunnel: fetching unfiltered results...")
+        unfiltered_rows = scraper.deep_tunnel_niche(
+            query=niche_query,
+            api_key=api_key,
+            filter_type='none',
+            max_pages=max_pages,
+        )
+        result["unfiltered_count"] = len(unfiltered_rows)
+        stash_log(f"Deep tunnel: {len(unfiltered_rows)} unfiltered products.")
+
+        # Step 4: Compute competition density
+        progress.progress(85, text="Computing competition density...")
+        status.update(label="Analyzing competition density...")
+        density = analyzer.calculate_competition_score(
+            total_results=result["unfiltered_count"],
+            filtered_results=result["filtered_count"],
+        )
+        result["density_label"] = density
+        result["is_golden"] = "Low Density" in density
+
+        # Step 5: Save to DB
+        data_str = json.dumps({
+            "filtered_rows": result["filtered_rows"],
+            "unfiltered_rows": result["unfiltered_rows"],
+            "filtered_count": result["filtered_count"],
+            "unfiltered_count": result["unfiltered_count"],
+            "density_label": density,
+            "is_golden": result["is_golden"],
+        })
+        database.save_tunnel_result(niche_query, data_str)
+
+        progress.progress(100, text="Deep tunnel complete!")
+        status.update(label=f"Tunnel complete — {density}", state="complete")
+        stash_log(f"Deep tunnel complete for '{niche_query}' — {density}.")
+    except Exception as exc:
+        result["error"] = str(exc)
+        status.update(label=f"Tunnel failed: {exc}", state="error")
+        stash_log(f"Deep tunnel FAILED: {exc}")
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -403,9 +512,22 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### Filters")
 
+    auto_filter = st.checkbox(
+        "Auto-Filter (New Releases)",
+        value=st.session_state.get("auto_filter", False),
+        help="When enabled, appends 'last 30 days' filter to ALL searches automatically",
+    )
+    st.session_state["auto_filter"] = auto_filter
+    if auto_filter:
+        st.markdown(
+            "<div style='font-size:0.78rem;color:#4CAF50;margin-bottom:4px;'>"
+            ":white_check_mark: Auto-Filter active — only last-30-days results shown</div>",
+            unsafe_allow_html=True,
+        )
+
     new_release = st.checkbox(
         "New Release Mode (Last 30 Days)",
-        value=st.session_state.get("new_release", False),
+        value=st.session_state.get("new_release", False) or auto_filter,
         help="Adds p_n_publication_date:1250226011 refinement to the search",
     )
     st.session_state["new_release"] = new_release
@@ -457,7 +579,7 @@ with st.sidebar:
 # ---------------------------------------------------------------------------
 # Main area
 # ---------------------------------------------------------------------------
-tab_names = [":bar_chart: Dashboard", ":gear: Settings", ":clock3: History"]
+tab_names = ["📊 Data Table", "🖼️ Visual Gallery", ":gear: Settings", ":clock3: History"]
 tabs = st.tabs(tab_names)
 
 # -- Session state initialisation --------------------------------------------
@@ -475,6 +597,14 @@ if "pipeline_results" not in st.session_state:
     st.session_state["pipeline_results"] = None
 if "pipeline_running" not in st.session_state:
     st.session_state["pipeline_running"] = False
+if "tunnel_results" not in st.session_state:
+    st.session_state["tunnel_results"] = None
+if "tunnel_niche_name" not in st.session_state:
+    st.session_state["tunnel_niche_name"] = ""
+if "tunnel_running" not in st.session_state:
+    st.session_state["tunnel_running"] = False
+if "tunnel_density" not in st.session_state:
+    st.session_state["tunnel_density"] = None
 
 
 # ---------------------------------------------------------------------------
@@ -488,6 +618,10 @@ def _display_results(results: Optional[Dict[str, Any]], query: str, sheet_id: st
         elif not results:
             st.info("Enter a search query and click **Run Pipeline** to begin.")
         return
+
+    # -- Prepare DataFrames ------------------------------------------------
+    ranked_rows = results.get("ranked_rows", [])
+    all_df = _pd.DataFrame(ranked_rows) if ranked_rows else _pd.DataFrame()
 
     # Metric cards
     st.markdown("### Results Overview")
@@ -515,18 +649,29 @@ def _display_results(results: Optional[Dict[str, Any]], query: str, sheet_id: st
             unsafe_allow_html=True,
         )
 
+    # -- Niche Insights (Top Themes by EOS) ---------------------------------
+    if not all_df.empty and "Theme" in all_df.columns and "EOS" in all_df.columns:
+        st.markdown("### :bulb: Niche Insights — Top Themes by EOS")
+        insights_df = analyzer.get_niche_insights(all_df)
+        top3 = insights_df.head(3)
+        insight_cols = st.columns(len(top3))
+        for col, (theme, row) in zip(insight_cols, top3.iterrows()):
+            col.markdown(
+                f"<div class='metric-box'>"
+                f"<div class='value'>{theme}</div>"
+                f"<div class='label'>{int(row['Product_Count'])} products &middot; Avg EOS {row['EOS']:.1f}</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
     # Gold-Mine Table
     if results.get("gems"):
-        st.markdown("### :gem: Gold-Mine Opportunities")
+        st.markdown("### :gem: Gold-Mine Opportunities (Ranked by EOS)")
         gems_df = _pd.DataFrame(results["gems"]).copy()
         gems_df["ASIN Link"] = gems_df["ASIN"].apply(
             lambda x: f"https://www.amazon.com/dp/{x}" if x else ""
         )
-        if "BSR" in gems_df.columns:
-            gems_df["Est. Daily Sales"] = gems_df["BSR"].apply(
-                lambda x: 10000.0 / x if x and x > 0 else None
-            )
-        display_cols = ["ASIN Link", "Title", "Author", "Price", "BSR", "Est. Daily Sales", "ReviewCount", "Rating"]
+        display_cols = ["ASIN Link", "Title", "Price", "Visibility_Score", "EOS", "Theme"]
         available = [c for c in display_cols if c in gems_df.columns]
         st.dataframe(
             gems_df[available].head(20),
@@ -535,27 +680,25 @@ def _display_results(results: Optional[Dict[str, Any]], query: str, sheet_id: st
             column_config={
                 "ASIN Link": st.column_config.LinkColumn("ASIN", display_text=r"https://www.amazon.com/dp/(.*)"),
                 "Price": st.column_config.NumberColumn("Price", format="$%.2f"),
-                "Est. Daily Sales": st.column_config.NumberColumn("Est. Daily Sales", format="%.1f"),
-                "Rating": st.column_config.NumberColumn("Rating", format="%.1f"),
-                "BSR": st.column_config.NumberColumn("BSR", format="%d"),
-                "ReviewCount": st.column_config.NumberColumn("Reviews", format="%d"),
+                "Visibility_Score": st.column_config.NumberColumn("Vis. Score", format="%.0f"),
+                "EOS": st.column_config.NumberColumn("EOS", format="%.1f"),
+                "Theme": st.column_config.TextColumn("Theme"),
             },
         )
 
     # Full Ranked Table
     if results.get("ranked_rows"):
         st.markdown("### All Ranked Products")
-        all_df = _pd.DataFrame(results["ranked_rows"]).copy()
-        all_df["ASIN Link"] = all_df["ASIN"].apply(
-            lambda x: f"https://www.amazon.com/dp/{x}" if x else ""
-        )
-        if "BSR" in all_df.columns:
-            all_df["Est. Daily Sales"] = all_df["BSR"].apply(
-                lambda x: 10000.0 / x if x and x > 0 else None
-            )
-        all_cols = ["ASIN Link", "Title", "Price", "BSR", "Est. Daily Sales", "ReviewCount", "Rating", "SmartScore"]
+        if "Visibility_Score" in all_df.columns:
+            all_df["Vis."] = all_df["Visibility_Score"].apply(lambda x: f"{x:.0f}")
+        all_cols = ["ASIN Link", "Title", "Price", "Visibility_Score", "EOS", "Theme", "ReviewCount", "Rating"]
+        if "SmartScore" in all_df.columns:
+            all_cols.append("SmartScore")
         all_avail = [c for c in all_cols if c in all_df.columns]
         with st.expander("Show full ranked table"):
+            all_df["ASIN Link"] = all_df["ASIN"].apply(
+                lambda x: f"https://www.amazon.com/dp/{x}" if x else ""
+            )
             st.dataframe(
                 all_df[all_avail],
                 use_container_width=True,
@@ -563,15 +706,16 @@ def _display_results(results: Optional[Dict[str, Any]], query: str, sheet_id: st
                 column_config={
                     "ASIN Link": st.column_config.LinkColumn("ASIN", display_text=r"https://www.amazon.com/dp/(.*)"),
                     "Price": st.column_config.NumberColumn("Price", format="$%.2f"),
-                    "Est. Daily Sales": st.column_config.NumberColumn("Est. Daily Sales", format="%.1f"),
-                    "SmartScore": st.column_config.NumberColumn("SmartScore", format="%.4f"),
+                    "Visibility_Score": st.column_config.NumberColumn("Vis. Score", format="%.0f"),
+                    "EOS": st.column_config.NumberColumn("EOS", format="%.1f"),
+                    "Theme": st.column_config.TextColumn("Theme"),
                     "Rating": st.column_config.NumberColumn("Rating", format="%.1f"),
-                    "BSR": st.column_config.NumberColumn("BSR", format="%d"),
                     "ReviewCount": st.column_config.NumberColumn("Reviews", format="%d"),
+                    "SmartScore": st.column_config.NumberColumn("SmartScore", format="%.4f"),
                 },
             )
 
-        json_bytes = json.dumps(results["ranked_rows"], indent=2, ensure_ascii=False).encode("utf-8")
+        json_bytes = json.dumps(ranked_rows, indent=2, ensure_ascii=False).encode("utf-8")
         safe_name = query.lower().replace(" ", "_")[:60]
         st.download_button(
             label="Download Ranked JSON",
@@ -582,8 +726,84 @@ def _display_results(results: Optional[Dict[str, Any]], query: str, sheet_id: st
         )
 
 
+# ---------------------------------------------------------------------------
+# Gallery display helper
+# ---------------------------------------------------------------------------
+def _display_gallery(results: Optional[Dict[str, Any]]) -> None:
+    """Render pipeline results as a visual card gallery with thumbnails."""
+    if not results or results.get("error") or not results.get("ranked_rows"):
+        if results and results.get("error"):
+            st.error(f"Pipeline halted: {results['error']}")
+        else:
+            st.info("Run a pipeline from the **Data Table** tab first to see products here.")
+        return
+
+    rows = results["ranked_rows"]
+    st.markdown(f"### :art: Product Gallery — {len(rows)} products")
+
+    cols = st.columns(4)
+    for i, product in enumerate(rows):
+        with cols[i % 4]:
+            # Thumbnail with fallback
+            thumb = product.get("thumbnail", "")
+            if thumb:
+                st.image(thumb, use_container_width=True)
+            else:
+                st.markdown(
+                    "<div style='background:#1a1d24;border-radius:8px;"
+                    "height:160px;display:flex;align-items:center;"
+                    "justify-content:center;color:#555;font-size:0.85rem;'>"
+                    "No Image Available</div>",
+                    unsafe_allow_html=True,
+                )
+
+            # Title (shortened)
+            title = str(product.get("Title", ""))[:50]
+            if len(str(product.get("Title", ""))) > 50:
+                title += "…"
+            st.markdown(
+                f"<div style='font-weight:600;font-size:0.85rem;"
+                f"margin:4px 0;line-height:1.3;'>{title}</div>",
+                unsafe_allow_html=True,
+            )
+
+            # Metadata block
+            price = product.get("Price", 0)
+            eos = product.get("EOS", 0)
+            pub = product.get("PublicationDate", "—")
+            bsr = product.get("BSR", 0)
+            meta = f"💰 **${float(price):.2f}**" if price else ""
+            if eos:
+                meta += f" &nbsp;🚀 **{float(eos):.1f}**"
+            if pub and pub != "N/A" and pub != "—":
+                meta += f" &nbsp;📅 {pub}"
+            if bsr:
+                meta += f" &nbsp;📈 {int(bsr):,}"
+            if meta:
+                st.markdown(
+                    f"<div style='font-size:0.78rem;color:#aaa;"
+                    f"margin:2px 0 6px 0;'>{meta}</div>",
+                    unsafe_allow_html=True,
+                )
+
+            # Action button
+            asin = product.get("ASIN", "")
+            if asin and asin != "N/A":
+                url = f"https://www.amazon.com/dp/{asin}"
+                st.markdown(
+                    f"<a href='{url}' target='_blank' "
+                    f"style='display:inline-block;background:#2196F3;color:#fff;"
+                    f"padding:4px 12px;border-radius:4px;text-decoration:none;"
+                    f"font-size:0.78rem;text-align:center;'>View on Amazon</a>",
+                    unsafe_allow_html=True,
+                )
+
+            # Spacer between cards
+            st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)
+
+
 # =========================================================================
-# TAB 0: Dashboard
+# TAB 0: Data Table
 # =========================================================================
 tab_dash = tabs[0]
 
@@ -815,11 +1035,184 @@ with tab_dash:
             # The rerun will pick this up in the sidebar query input
             pass
 
+    # -- Deep Niche Tunneling ---------------------------------------------------
+    st.markdown("---")
+    st.markdown("### :tent: Deep Niche Tunneling")
+    st.markdown(
+        "<div style='color:#777;font-size:0.85rem;margin-bottom:8px;'>"
+        "Extract a niche from any product, auto-filter by last-30-days, "
+        "score with EOS, and measure competition density.</div>",
+        unsafe_allow_html=True,
+    )
+
+    tunnel_cols = st.columns([3, 1, 1])
+    with tunnel_cols[0]:
+        tunnel_query = st.text_input(
+            "Niche to tunnel (or leave blank to pick from results)",
+            placeholder="e.g. low fodmap cookbook for kids",
+            label_visibility="collapsed",
+        )
+    with tunnel_cols[1]:
+        tunnel_pages = st.number_input("Pages", min_value=1, max_value=10, value=3, label_visibility="collapsed")
+    with tunnel_cols[2]:
+        tunnel_disabled = st.session_state["tunnel_running"] or not MODULES_OK
+        if st.button("Deep Tunnel :rocket:", type="primary", disabled=tunnel_disabled, use_container_width=True):
+            target = tunnel_query.strip() or query.strip()
+            if not target:
+                st.warning("Enter a niche query first.")
+            else:
+                st.session_state["tunnel_running"] = True
+                st.session_state["tunnel_results"] = None
+                st.session_state["tunnel_niche_name"] = target
+                st.session_state["tunnel_density"] = None
+                st.rerun()
+
+    # Execute tunnel if triggered
+    if st.session_state["tunnel_running"] and st.session_state["tunnel_niche_name"]:
+        api_key = config_manager.get_serpapi_key()
+        if api_key == "YOUR_SERPAPI_KEY_HERE":
+            st.error("Configure a SerpApi key in Settings to use Deep Tunneling.")
+            st.session_state["tunnel_running"] = False
+        else:
+            stash_log(f"Deep tunnel: starting for '{st.session_state['tunnel_niche_name']}'...")
+            tunnel_result = run_deep_tunnel_dashboard(
+                niche_query=st.session_state["tunnel_niche_name"],
+                api_key=api_key,
+                max_pages=int(tunnel_pages),
+            )
+            st.session_state["tunnel_results"] = tunnel_result
+            st.session_state["tunnel_running"] = False
+            st.rerun()
+
+    # Display tunnel results
+    tunnel_data = st.session_state.get("tunnel_results")
+    if tunnel_data and not tunnel_data.get("error"):
+        # -- Density Score card ------------------------------------------------
+        density = tunnel_data["density_label"]
+        is_golden = tunnel_data.get("is_golden", False)
+        if "Low Density" in density:
+            density_color = "#4CAF50"
+            density_icon = ":large_green_circle:"
+        elif "Moderate" in density:
+            density_color = "#FF9800"
+            density_icon = ":large_yellow_circle:"
+        else:
+            density_color = "#f44336"
+            density_icon = ":red_circle:"
+
+        st.markdown(
+            f"<div style='background:#1a1d24;border-radius:8px;padding:1rem;margin:12px 0;"
+            f"border-left:4px solid {density_color};'>"
+            f"<div style='display:flex;align-items:center;gap:12px;'>"
+            f"<span style='font-size:1.5rem;'>{density_icon}</span>"
+            f"<div>"
+            f"<div style='font-weight:600;font-size:1rem;'>Competition Score: {density}</div>"
+            f"<div style='font-size:0.85rem;color:#aaa;'>"
+            f"Filtered: {tunnel_data['filtered_count']} products &middot; "
+            f"Unfiltered: {tunnel_data['unfiltered_count']} products</div>"
+            f"</div></div>",
+            unsafe_allow_html=True,
+        )
+
+        if is_golden:
+            st.success(":star: **Golden Niche** — Low competition with strong opportunity potential!")
+
+        # -- Golden List (filtered + scored) -----------------------------------
+        filtered = tunnel_data.get("filtered_rows", [])
+        gems = tunnel_data.get("gems", [])
+
+        if filtered:
+            st.markdown(f"### :gem: Golden List — {len(filtered)} Scored Products (Ranked by EOS)")
+            gf_df = _pd.DataFrame(filtered)
+            gf_df["ASIN Link"] = gf_df["ASIN"].apply(lambda x: f"https://www.amazon.com/dp/{x}" if x else "")
+
+            display_cols = ["ASIN Link", "Title", "Price", "Visibility_Score", "EOS", "Theme", "ReviewCount", "Rating"]
+            avail = [c for c in display_cols if c in gf_df.columns]
+            st.dataframe(
+                gf_df[avail].head(50),
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "ASIN Link": st.column_config.LinkColumn("ASIN", display_text=r"https://www.amazon.com/dp/(.*)"),
+                    "Price": st.column_config.NumberColumn("Price", format="$%.2f"),
+                    "Visibility_Score": st.column_config.NumberColumn("Vis. Score", format="%.0f"),
+                    "EOS": st.column_config.NumberColumn("EOS", format="%.1f"),
+                    "Theme": st.column_config.TextColumn("Theme"),
+                    "Rating": st.column_config.NumberColumn("Rating", format="%.1f"),
+                    "ReviewCount": st.column_config.NumberColumn("Reviews", format="%d"),
+                },
+            )
+
+            # -- CSV Export ----------------------------------------------------
+            csv_buffer = StringIO()
+            csv_writer = csv.writer(csv_buffer)
+            csv_headers = ["ASIN", "Title", "Price", "Visibility_Score", "EOS", "Theme", "ReviewCount", "Rating", "PublicationDate"]
+            csv_writer.writerow(csv_headers)
+            for row in filtered:
+                csv_writer.writerow([
+                    row.get("ASIN", ""),
+                    row.get("Title", ""),
+                    row.get("Price", ""),
+                    row.get("Visibility_Score", ""),
+                    row.get("EOS", ""),
+                    row.get("Theme", ""),
+                    row.get("ReviewCount", ""),
+                    row.get("Rating", ""),
+                    row.get("PublicationDate", ""),
+                ])
+            safe_name = st.session_state["tunnel_niche_name"].lower().replace(" ", "_")[:40]
+            st.download_button(
+                label=":inbox_tray: Export Golden List to CSV",
+                data=csv_buffer.getvalue(),
+                file_name=f"golden_list_{safe_name}.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+
+            # -- Gold Gems mini-table -------------------------------------------
+            if gems:
+                st.markdown(f"**:gem: Gold Gems — {len(gems)} products with < 30 reviews**")
+                gem_df = _pd.DataFrame(gems)
+                gem_df["ASIN Link"] = gem_df["ASIN"].apply(lambda x: f"https://www.amazon.com/dp/{x}" if x else "")
+                gem_cols = ["ASIN Link", "Title", "Price", "EOS", "ReviewCount"]
+                gem_avail = [c for c in gem_cols if c in gem_df.columns]
+                st.dataframe(
+                    gem_df[gem_avail].head(20),
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "ASIN Link": st.column_config.LinkColumn("ASIN", display_text=r"https://www.amazon.com/dp/(.*)"),
+                        "Price": st.column_config.NumberColumn("Price", format="$%.2f"),
+                        "EOS": st.column_config.NumberColumn("EOS", format="%.1f"),
+                        "ReviewCount": st.column_config.NumberColumn("Reviews", format="%d"),
+                    },
+                )
+        else:
+            st.info("No results returned from deep tunnel. Try a broader niche query.")
+
+    elif tunnel_data and tunnel_data.get("error"):
+        st.error(f"Deep tunnel failed: {tunnel_data['error']}")
+
 
 # =========================================================================
-# TAB 1: Settings
+# TAB 1: Visual Gallery
 # =========================================================================
-tab_settings = tabs[1]
+tab_gallery = tabs[1]
+
+with tab_gallery:
+    st.markdown("# :art: Visual Product Gallery")
+    st.markdown(
+        "<div style='color:#777;margin-top:-12px;margin-bottom:20px;'>"
+        "Browse products in a visual card layout with thumbnails</div>",
+        unsafe_allow_html=True,
+    )
+    _display_gallery(st.session_state.get("pipeline_results"))
+
+
+# =========================================================================
+# TAB 2: Settings
+# =========================================================================
+tab_settings = tabs[2]
 
 with tab_settings:
     st.markdown("## :gear: Settings")
@@ -888,9 +1281,9 @@ with tab_settings:
 
 
 # =========================================================================
-# TAB 2: History
+# TAB 3: History
 # =========================================================================
-tab_history = tabs[2]
+tab_history = tabs[3]
 
 with tab_history:
     st.markdown("## :clock3: Past Searches")

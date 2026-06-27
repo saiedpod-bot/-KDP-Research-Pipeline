@@ -64,7 +64,7 @@ SERPAPI_KEY: str = os.getenv("SERPAPI_KEY", "YOUR_SERPAPI_KEY_HERE")
 AMAZON_DOMAIN: str = "amazon.com"
 
 # Delay (seconds) between consecutive API calls to avoid rate limits
-REQUEST_DELAY: float = 1.5
+REQUEST_DELAY: float = 2.0
 
 # Output directory — relative to project root so scraper + analyzer share the same path
 OUTPUT_DIR: str = "output"
@@ -161,6 +161,25 @@ def _extract_author(item: Dict[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Helper: extract publication date from SerpApi item
+# ---------------------------------------------------------------------------
+def _extract_publication_date(item: Dict[str, Any]) -> str:
+    """Best-effort extraction of the publication date."""
+    try:
+        pub = item.get("publication_date")
+        if pub:
+            return str(pub)
+        ext = item.get("extensions") or {}
+        if isinstance(ext, dict):
+            pub = ext.get("publication_date")
+            if pub:
+                return str(pub)
+        return "N/A"
+    except Exception:
+        return "N/A"
+
+
+# ---------------------------------------------------------------------------
 # Helper: parse price string to float
 # ---------------------------------------------------------------------------
 def _parse_price(item: Dict[str, Any]) -> float:
@@ -243,7 +262,8 @@ def format_data_for_csv(raw_json: Dict[str, Any]) -> List[Dict[str, Any]]:
                     "BSR": 0,                 # requires product-detail endpoint
                     "ReviewCount": _parse_review_count(item),
                     "Rating": _parse_rating(item),
-                    "PublicationDate": "N/A", # requires product-detail endpoint
+                    "PublicationDate": _extract_publication_date(item),
+                    "thumbnail": item.get("thumbnail", ""),
                 }
                 rows.append(row)
             except Exception as exc:
@@ -305,6 +325,7 @@ def fetch_all_pages(
     api_key: str = SERPAPI_KEY,
     domain: str = AMAZON_DOMAIN,
     page_size: int = 20,
+    filter_params: Optional[Dict[str, str]] = None,
 ) -> List[Dict[str, Any]]:
     """
     Fetch multiple pages of Amazon search results using the SerpApi
@@ -312,6 +333,7 @@ def fetch_all_pages(
 
     Each page fetches up to *page_size* results.  With the default
     *max_pages=5* and *page_size=20* you can expect **~80-100+** products.
+    Loop stops early if an empty page is returned.
 
     Parameters
     ----------
@@ -325,6 +347,8 @@ def fetch_all_pages(
         Amazon marketplace domain (default: amazon.com).
     page_size : int
         Results offset increment between pages (default: 20).
+    filter_params : dict, optional
+        Additional Amazon search parameters (e.g. ``rh`` for refinement).
 
     Returns
     -------
@@ -347,6 +371,8 @@ def fetch_all_pages(
             "hl": "en-us",
             "start": start_offset,
         }
+        if filter_params:
+            params.update(filter_params)
 
         for attempt in range(1, 4):
             try:
@@ -367,6 +393,14 @@ def fetch_all_pages(
                     "Page %d — %d items received.", page, len(organic),
                 )
 
+                # Stop if page is empty (no more results available)
+                if not organic:
+                    logger.info(
+                        "Page %d returned 0 items — no more results. Stopping.",
+                        page,
+                    )
+                    break
+
                 # Deduplicate and collect
                 page_new = 0
                 for item in organic:
@@ -379,7 +413,7 @@ def fetch_all_pages(
                     "Page %d — %d new (deduped).", page, page_new,
                 )
 
-                # Respect rate limits
+                # Respect rate limits — 2-second gap between pages
                 if page < max_pages:
                     time.sleep(REQUEST_DELAY)
 
@@ -398,9 +432,9 @@ def fetch_all_pages(
         max_pages, len(all_items),
     )
 
-    # Format raw items into schema rows
+    # Format raw items into schema rows with position tracking
     rows: List[Dict[str, Any]] = []
-    for item in all_items:
+    for position, item in enumerate(all_items, start=1):
         try:
             rows.append({
                 "ASIN": item.get("asin", "N/A"),
@@ -410,7 +444,9 @@ def fetch_all_pages(
                 "BSR": 0,
                 "ReviewCount": _parse_review_count(item),
                 "Rating": _parse_rating(item),
-                "PublicationDate": "N/A",
+                "PublicationDate": _extract_publication_date(item),
+                "Position": position,
+                "thumbnail": item.get("thumbnail", ""),
             })
         except Exception as exc:
             logger.warning(
@@ -628,7 +664,8 @@ def search_and_format_batch(
                 "BSR": 0,
                 "ReviewCount": _parse_review_count(item),
                 "Rating": _parse_rating(item),
-                "PublicationDate": "N/A",
+                "PublicationDate": _extract_publication_date(item),
+                "thumbnail": item.get("thumbnail", ""),
             }
             rows.append(row)
             parsed_ok += 1

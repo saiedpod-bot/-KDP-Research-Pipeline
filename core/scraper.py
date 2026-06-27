@@ -65,7 +65,7 @@ SERPAPI_KEY: str = os.getenv("SERPAPI_KEY", "YOUR_SERPAPI_KEY_HERE")
 AMAZON_DOMAIN: str = "amazon.com"
 
 # Delay (seconds) between consecutive API calls to avoid rate limits
-REQUEST_DELAY: float = 1.5
+REQUEST_DELAY: float = 2.0
 
 # Output directory — relative to project root so scraper + analyzer share the same path
 OUTPUT_DIR: str = "output"
@@ -168,6 +168,32 @@ def _extract_author(item: Dict[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Helper: extract publication date from SerpApi item
+# ---------------------------------------------------------------------------
+def _extract_publication_date(item: Dict[str, Any]) -> str:
+    """
+    Best-effort extraction of the publication date.
+
+    Tries, in order:
+      1. `publication_date` field
+      2. `extensions.publication_date` nested field
+      3. "N/A" fallback
+    """
+    try:
+        pub = item.get("publication_date")
+        if pub:
+            return str(pub)
+        ext = item.get("extensions") or {}
+        if isinstance(ext, dict):
+            pub = ext.get("publication_date")
+            if pub:
+                return str(pub)
+        return "N/A"
+    except Exception:
+        return "N/A"
+
+
+# ---------------------------------------------------------------------------
 # Helper: parse price string to float
 # ---------------------------------------------------------------------------
 def _parse_price(item: Dict[str, Any]) -> float:
@@ -240,7 +266,7 @@ def format_data_for_csv(raw_json: Dict[str, Any]) -> List[Dict[str, Any]]:
             logger.warning("No organic results found in the response.")
             return rows
 
-        for item in results:
+        for position, item in enumerate(results, start=1):
             try:
                 row = {
                     "ASIN": item.get("asin", "N/A"),
@@ -250,7 +276,9 @@ def format_data_for_csv(raw_json: Dict[str, Any]) -> List[Dict[str, Any]]:
                     "BSR": 0,                 # requires product-detail endpoint
                     "ReviewCount": _parse_review_count(item),
                     "Rating": _parse_rating(item),
-                    "PublicationDate": "N/A", # requires product-detail endpoint
+                    "PublicationDate": _extract_publication_date(item),
+                    "Position": position,
+                    "thumbnail": item.get("thumbnail", ""),
                 }
                 rows.append(row)
             except Exception as exc:
@@ -313,6 +341,7 @@ def fetch_all_pages(
     domain: str = AMAZON_DOMAIN,
     page_size: int = 20,
     filter_params: Optional[Dict[str, str]] = None,
+    progress_callback: Optional[callable] = None,
 ) -> List[Dict[str, Any]]:
     """
     Fetch multiple pages of Amazon search results using the SerpApi
@@ -335,6 +364,8 @@ def fetch_all_pages(
         Results offset increment between pages (default: 20).
     filter_params : dict, optional
         Additional Amazon search parameters (e.g. ``rh`` for refinement).
+    progress_callback : callable, optional
+        Called as progress_callback(current_page, max_pages) after each page.
 
     Returns
     -------
@@ -379,6 +410,14 @@ def fetch_all_pages(
                     "Page %d — %d items received.", page, len(organic),
                 )
 
+                # Stop if page is empty (no more results available)
+                if not organic:
+                    logger.info(
+                        "Page %d returned 0 items — no more results. Stopping.",
+                        page,
+                    )
+                    break
+
                 # Deduplicate and collect
                 page_new = 0
                 for item in organic:
@@ -391,7 +430,10 @@ def fetch_all_pages(
                     "Page %d — %d new (deduped).", page, page_new,
                 )
 
-                # Respect rate limits
+                if progress_callback:
+                    progress_callback(page, max_pages)
+
+                # Respect rate limits — 2-second gap between pages
                 if page < max_pages:
                     time.sleep(REQUEST_DELAY)
 
@@ -412,7 +454,7 @@ def fetch_all_pages(
 
     # Format raw items into schema rows
     rows: List[Dict[str, Any]] = []
-    for item in all_items:
+    for position, item in enumerate(all_items, start=1):
         try:
             rows.append({
                 "ASIN": item.get("asin", "N/A"),
@@ -422,7 +464,9 @@ def fetch_all_pages(
                 "BSR": 0,
                 "ReviewCount": _parse_review_count(item),
                 "Rating": _parse_rating(item),
-                "PublicationDate": "N/A",
+                "PublicationDate": _extract_publication_date(item),
+                "Position": position,
+                "thumbnail": item.get("thumbnail", ""),
             })
         except Exception as exc:
             logger.warning(
@@ -638,8 +682,7 @@ def search_and_format_batch(
     merged_items = merge_organic_results(raw_responses)
 
     rows: List[Dict[str, Any]] = []
-    parsed_ok = 0
-    for item in merged_items:
+    for position, item in enumerate(merged_items, start=1):
         try:
             row = {
                 "ASIN": item.get("asin", "N/A"),
@@ -649,17 +692,18 @@ def search_and_format_batch(
                 "BSR": 0,
                 "ReviewCount": _parse_review_count(item),
                 "Rating": _parse_rating(item),
-                "PublicationDate": "N/A",
+                "PublicationDate": _extract_publication_date(item),
+                "Position": position,
+                "thumbnail": item.get("thumbnail", ""),
             }
             rows.append(row)
-            parsed_ok += 1
         except Exception as exc:
             asin = item.get("asin", "UNKNOWN")
             logger.warning("Skipping item %s: %s", asin, exc)
 
     logger.info(
         "Formatted %d / %d merged items into schema rows.",
-        parsed_ok,
+        len(rows),
         len(merged_items),
     )
 
@@ -1039,7 +1083,7 @@ def tunnel_category_pages(
 
     # Format into schema rows
     rows: List[Dict[str, Any]] = []
-    for item in all_items:
+    for position, item in enumerate(all_items, start=1):
         try:
             rows.append({
                 "ASIN": item.get("asin", "N/A"),
@@ -1049,7 +1093,8 @@ def tunnel_category_pages(
                 "BSR": 0,
                 "ReviewCount": _parse_review_count(item),
                 "Rating": _parse_rating(item),
-                "PublicationDate": "N/A",
+                "PublicationDate": _extract_publication_date(item),
+                "thumbnail": item.get("thumbnail", ""),
             })
         except Exception as exc:
             logger.warning("Skipping tunnel item %s: %s", item.get("asin", "?"), exc)
@@ -1080,6 +1125,227 @@ def _merge_organic(
         if asin and asin not in seen:
             seen.add(asin)
             target.append(item)
+
+
+# ---------------------------------------------------------------------------
+# Deep Niche Tunneling — extract categories + build filtered search URLs
+# ---------------------------------------------------------------------------
+def extract_niche_from_asin(
+    asin: str,
+    api_key: str,
+    domain: str = AMAZON_DOMAIN,
+) -> Optional[Dict[str, Any]]:
+    """
+    Extract niche (category/browse node) information from a single ASIN
+    via the SerpApi ``amazon_product`` endpoint.
+
+    Returns a dict with keys:
+      - asin: the source ASIN
+      - category_name: human-readable category name (e.g. "Children's Cookbooks")
+      - browse_node_id: Amazon browse node ID for URL construction
+      - breadcrumb: full category breadcrumb list
+      - url: raw product detail data for further analysis
+
+    Returns ``None`` if the API call fails or no category is found.
+    """
+    details = fetch_product_details(asin, api_key, domain)
+    if not details:
+        return None
+
+    categories_raw = details.get("categories") or details.get("product_information", {}).get("categories", [])
+    if not categories_raw or not isinstance(categories_raw, list):
+        return None
+
+    # Pick the most specific (last) category with a browse node ID
+    best: Optional[Dict[str, Any]] = None
+    breadcrumb: List[str] = []
+    for cat in categories_raw:
+        name = (cat.get("name") or "").strip()
+        node_id = cat.get("id") or cat.get("node_id") or ""
+        if name:
+            breadcrumb.append(name)
+            if node_id:
+                best = {
+                    "category_name": name,
+                    "browse_node_id": str(node_id),
+                }
+
+    if not best:
+        # Fallback: use the last breadcrumb name even without node ID
+        if breadcrumb:
+            best = {
+                "category_name": breadcrumb[-1],
+                "browse_node_id": "",
+            }
+        else:
+            return None
+
+    best["asin"] = asin
+    best["breadcrumb"] = breadcrumb
+    best["url"] = details.get("product_link") or f"https://www.{domain}/dp/{asin}"
+    logger.info(
+        "Niche extracted from ASIN %s — '%s' (node: %s)",
+        asin, best["category_name"], best["browse_node_id"],
+    )
+    return best
+
+
+def generate_niche_search_url(
+    niche_info: Dict[str, Any],
+    last_30_days: bool = True,
+    domain: str = AMAZON_DOMAIN,
+) -> str:
+    """
+    Build an Amazon search URL from extracted niche information.
+
+    Parameters
+    ----------
+    niche_info : dict
+        Result from ``extract_niche_from_asin()`` — must contain
+        ``category_name`` and optionally ``browse_node_id``.
+    last_30_days : bool
+        If True, append ``p_n_publication_date:1250226011`` to the
+        ``rh`` refinement.
+    domain : str
+        Amazon marketplace domain.
+
+    Returns
+    -------
+    str
+        Full Amazon search URL with rh refinement parameters.
+    """
+    node_id = niche_info.get("browse_node_id", "")
+    category_name = niche_info.get("category_name", "books")
+
+    if node_id:
+        rh_parts = [f"n:{node_id}"]
+    else:
+        # URL-encode the category name as a search fallback
+        encoded_name = category_name.replace(" ", "+")
+        rh_parts = [f"n:283155"]  # default to "Books" node
+
+    if last_30_days:
+        rh_parts.append("p_n_publication_date:1250226011")
+
+    rh_str = ",".join(rh_parts)
+    query_encoded = category_name.replace(" ", "+")
+    url = (
+        f"https://www.{domain}/s?"
+        f"k={query_encoded}&rh={rh_str}"
+    )
+    logger.info(
+        "Niche search URL generated — %s (node: %s, last_30_days: %s)",
+        url, node_id, last_30_days,
+    )
+    return url
+
+
+def generate_filtered_url(
+    query: str,
+    filter_type: str = 'new_30_days',
+    domain: str = AMAZON_DOMAIN,
+) -> tuple:
+    """
+    Generate filtered Amazon search URL + params pair for SerpApi.
+
+    Returns (base_url, params_dict) so the caller can pass params directly
+    to ``serpapi.Client.search()``.
+
+    Parameters
+    ----------
+    query : str
+        Amazon search keyword.
+    filter_type : str
+        ``'new_30_days'`` — appends ``n:283155,p_n_publication_date:1250226011``.
+    domain : str
+        Amazon marketplace domain.
+
+    Returns
+    -------
+    tuple[ str, dict ]
+        (base_url, params_dict) — URL for display, params for SerpApi.
+    """
+    base_url = f"https://www.{domain}/s"
+    params: Dict[str, Any] = {
+        "engine": "amazon",
+        "amazon_domain": domain,
+        "k": query.replace(" ", "+"),
+        "i": "stripbooks",
+        "ref": "nb_sb_noss",
+    }
+    if filter_type == 'new_30_days':
+        params.update({
+            "rh": "n:283155,p_n_publication_date:1250226011",
+            "dc": "true",
+        })
+    logger.info("Filtered URL generated — query='%s', filter=%s", query, filter_type)
+    return base_url, params
+
+
+def deep_tunnel_niche(
+    query: str,
+    api_key: str,
+    filter_type: str = 'new_30_days',
+    domain: str = AMAZON_DOMAIN,
+    max_pages: int = 3,
+) -> List[Dict[str, Any]]:
+    """
+    Deep Tunnel into a niche: run a filtered Amazon search and return
+    formatted product rows with EOS-friendly schema.
+
+    Uses ``generate_filtered_url()`` + ``fetch_all_pages()`` internally.
+    """
+    _url, params = generate_filtered_url(query, filter_type, domain)
+    client = Client(api_key=api_key)
+
+    all_items: List[Dict[str, Any]] = []
+    seen_asins: set = set()
+    page_size = 20
+
+    for page in range(1, max_pages + 1):
+        params["start"] = (page - 1) * page_size
+        for attempt in range(1, 4):
+            try:
+                raw = client.search(**params)
+                if "error" in raw:
+                    break
+                organic = raw.get("organic_results", [])
+                if not organic:
+                    break
+                for item in organic:
+                    asin = item.get("asin")
+                    if asin and asin not in seen_asins:
+                        seen_asins.add(asin)
+                        all_items.append(item)
+                if page < max_pages:
+                    time.sleep(REQUEST_DELAY)
+                break
+            except Exception as exc:
+                if attempt < 3:
+                    time.sleep(REQUEST_DELAY * (2 ** (attempt - 1)))
+                else:
+                    logger.warning("deep_tunnel_niche page %d failed: %s", page, exc)
+
+    rows: List[Dict[str, Any]] = []
+    for position, item in enumerate(all_items, start=1):
+        try:
+            rows.append({
+                "ASIN": item.get("asin", "N/A"),
+                "Title": (item.get("title") or "").strip(),
+                "Author": _extract_author(item),
+                "Price": _parse_price(item),
+                "BSR": 0,
+                "ReviewCount": _parse_review_count(item),
+                "Rating": _parse_rating(item),
+                "PublicationDate": _extract_publication_date(item),
+                "thumbnail": item.get("thumbnail", ""),
+                "Position": position,
+            })
+        except Exception as exc:
+            logger.warning("Skipping tunnel item %s: %s", item.get("asin", "?"), exc)
+
+    logger.info("Deep tunnel complete — %d unique products for '%s'", len(rows), query)
+    return rows
 
 
 # ---------------------------------------------------------------------------

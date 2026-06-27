@@ -84,6 +84,17 @@ def init_db() -> None:
                 avg_price       REAL    DEFAULT 0.0,
                 searched_at     TEXT    DEFAULT (datetime('now', 'localtime'))
             );
+
+            CREATE TABLE IF NOT EXISTS tunnel_results (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                niche_query     TEXT    NOT NULL,
+                filtered_count  INTEGER DEFAULT 0,
+                unfiltered_count INTEGER DEFAULT 0,
+                density_label   TEXT    DEFAULT '',
+                is_golden       INTEGER DEFAULT 0,
+                results_json    TEXT    DEFAULT '{}',
+                created_at      TEXT    DEFAULT (datetime('now', 'localtime'))
+            );
         """)
         conn.commit()
         conn.close()
@@ -394,3 +405,45 @@ def delete_discovered_niche(niche_id: int) -> bool:
     except Exception as exc:
         logger.error("Failed to delete niche #%d: %s", niche_id, exc)
         return False
+
+
+# ---------------------------------------------------------------------------
+# Deep Tunnel Results
+# ---------------------------------------------------------------------------
+def save_tunnel_result(
+    niche_query: str,
+    results_json: str,
+) -> Optional[int]:
+    """Persist a deep tunnel result. Returns row id or None."""
+    try:
+        conn = get_connection()
+        cur = conn.execute(
+            """INSERT INTO tunnel_results
+               (niche_query, results_json)
+               VALUES (?, ?)""",
+            (niche_query, results_json),
+        )
+        row_id = cur.lastrowid
+        conn.commit()
+        conn.close()
+        logger.info("Tunnel result saved for '%s' (id=%s).", niche_query, row_id)
+        return row_id
+    except Exception as exc:
+        logger.error("Failed to save tunnel result: %s", exc)
+        return None
+
+
+def get_tunnel_history(limit: int = 20) -> List[Dict[str, Any]]:
+    """Return recent tunnel results."""
+    try:
+        conn = get_connection()
+        rows = conn.execute(
+            """SELECT * FROM tunnel_results
+               ORDER BY created_at DESC LIMIT ?""",
+            (limit,),
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception as exc:
+        logger.error("Failed to fetch tunnel history: %s", exc)
+        return []

@@ -66,6 +66,7 @@ def run_pipeline(
     max_pages: int = 1,
     enrich_bsr: bool = False,
     max_enrich: int = 20,
+    filter_params: Optional[Dict[str, str]] = None,
 ) -> bool:
     """
     Execute the full KDP research pipeline: scrape -> analyze -> export.
@@ -112,6 +113,7 @@ def run_pipeline(
                 max_pages=max_pages,
                 api_key=scraper.SERPAPI_KEY,
                 domain=scraper.AMAZON_DOMAIN,
+                filter_params=filter_params,
             )
             if scraped_rows:
                 scraper.save_results(query, {"query": query, "max_pages": max_pages, "organic_results": [], "formatted_rows": scraped_rows}, scraped_rows)
@@ -387,8 +389,18 @@ if __name__ == "__main__":
         default=20,
         help="Maximum ASINs to enrich with BSR (default: 20, costs 1 credit each)",
     )
+    parser.add_argument(
+        "--new-release",
+        action="store_true",
+        help="Only show products released in the last 30 days (Amazon New Release filter)",
+    )
 
     args = parser.parse_args()
+
+    # Build filter_params dict
+    filter_params: Dict[str, str] = {}
+    if args.new_release:
+        filter_params["rh"] = "p_n_publication_date:1250226011"
 
     try:
         success = run_pipeline(
@@ -400,6 +412,7 @@ if __name__ == "__main__":
             max_pages=args.max_pages,
             enrich_bsr=args.enrich_bsr,
             max_enrich=args.max_enrich,
+            filter_params=filter_params,
         )
     except KeyboardInterrupt:
         logger.warning("Pipeline terminated by user.")
