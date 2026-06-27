@@ -1150,6 +1150,216 @@ def get_niche_verdict(score: float) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Market Score (Pangolinfo-optimized) — 4-factor 0–100 scoring
+# ---------------------------------------------------------------------------
+# Formula:
+#   Demand (35%)       — median Sales as demand proxy
+#   Competition (30%)  — median ReviewCount of top 10 (target < 500)
+#   Pricing (15%)      — proximity to $5.99–$9.99 sweet spot
+#   Dominance (-25%)   — flat penalty if top 3 hold > 60% of reviews
+# ---------------------------------------------------------------------------
+
+
+def _market_demand_score(products: List[Dict[str, Any]]) -> float:
+    """
+    Demand sub-score (0–100) based on median Sales value.
+
+    Higher sales = higher demand.
+    Calibration:
+      median_sales >= 500  → 100
+      median_sales >= 200  → 80
+      median_sales >= 100  → 60
+      median_sales >= 50   → 40
+      median_sales >= 10   → 20
+      else                 → 5
+    """
+    sales = [
+        p.get("Sales", 0) or 0
+        for p in products
+        if (p.get("Sales", 0) or 0) > 0
+    ]
+    if not sales:
+        # Fallback: use review count as proxy
+        reviews = [
+            p.get("ReviewCount", 0) or 0
+            for p in products
+            if (p.get("ReviewCount", 0) or 0) > 0
+        ]
+        if not reviews:
+            return 5.0
+        median_r = sorted(reviews)[len(reviews) // 2]
+        if median_r >= 500:
+            return 100.0
+        if median_r >= 200:
+            return 70.0
+        if median_r >= 50:
+            return 40.0
+        if median_r >= 10:
+            return 20.0
+        return 10.0
+
+    median_s = sorted(sales)[len(sales) // 2]
+    if median_s >= 500:
+        return 100.0
+    if median_s >= 200:
+        return 80.0
+    if median_s >= 100:
+        return 60.0
+    if median_s >= 50:
+        return 40.0
+    if median_s >= 10:
+        return 20.0
+    return 5.0
+
+
+def _market_competition_score(products: List[Dict[str, Any]]) -> float:
+    """
+    Competition sub-score (0–100) based on median ReviewCount of top 10.
+
+    Target: < 500 reviews = good (low competition).
+    Calibration:
+      median <= 50   → 100 (very low competition)
+      median <= 200  → 75
+      median <= 500  → 50 (target threshold)
+      median <= 1000 → 25
+      median > 1000  → 10
+    """
+    top10 = products[:10]
+    counts = sorted([
+        p.get("ReviewCount", 0) or 0
+        for p in top10
+    ])
+    if not counts:
+        return 50.0
+
+    mid = len(counts) // 2
+    median = counts[mid] if len(counts) % 2 else (counts[mid - 1] + counts[mid]) / 2
+
+    if median <= 50:
+        return 100.0
+    if median <= 200:
+        return 75.0
+    if median <= 500:
+        return 50.0
+    if median <= 1000:
+        return 25.0
+    return 10.0
+
+
+def _market_pricing_score(products: List[Dict[str, Any]]) -> float:
+    """
+    Pricing sub-score (0–100) based on proximity to $5.99–$9.99 sweet spot.
+
+    Score = (% of products in sweet spot * 100) - avg_price_penalty
+    """
+    prices = [
+        p.get("Price", 0) or 0
+        for p in products
+        if (p.get("Price", 0) or 0) > 0
+    ]
+    if not prices:
+        return 30.0
+
+    in_range = sum(1 for p in prices if 5.99 <= p <= 9.99)
+    ratio = in_range / len(prices)
+    avg_p = sum(prices) / len(prices)
+
+    penalty = 0.0
+    if avg_p < 5.99:
+        penalty = 10.0
+    elif avg_p > 15.0:
+        penalty = 20.0
+
+    return round(max(0, min(ratio * 100 - penalty, 100)), 1)
+
+
+def _market_dominance_penalty(products: List[Dict[str, Any]]) -> float:
+    """
+    Dominance penalty (0 or 25).
+
+    If top 3 hold > 60% of total ReviewCount → full 25-point penalty.
+    Otherwise 0.
+    """
+    if len(products) < 4:
+        return 0.0
+    counts = [p.get("ReviewCount", 0) or 0 for p in products]
+    total = sum(counts)
+    if total <= 0:
+        return 0.0
+    top3 = sum(sorted(counts, reverse=True)[:3])
+    concentration = top3 / total
+    return 25.0 if concentration > 0.60 else 0.0
+
+
+def calculate_market_score(
+    products: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """
+    Compute the Market Score (0–100) optimized for Pangolinfo data.
+
+    Parameters
+    ----------
+    products : list[dict]
+        Normalized product rows (ASIN, Price, ReviewCount, Sales, ...).
+
+    Returns
+    -------
+    dict with keys:
+        score       — int (0–100)
+        band        — str verdict label
+        verdict     — str descriptive verdict with reasoning
+        breakdown   — dict of signal scores + contributions
+    """
+    if not products:
+        return {"score": 0, "band": "No Data", "verdict": "Insufficient data to score.", "breakdown": {}}
+
+    demand = _market_demand_score(products)
+    competition = _market_competition_score(products)
+    pricing = _market_pricing_score(products)
+    penalty = _market_dominance_penalty(products)
+
+    raw = demand * 0.35 + competition * 0.30 + pricing * 0.15 - penalty
+    score = int(round(max(0, min(raw, 100))))
+
+    band = get_niche_verdict(float(score))
+
+    # Descriptive verdict
+    if score >= 85:
+        verdict = "Excellent — High demand, low competition. Strong entry opportunity."
+    elif score >= 70:
+        verdict = "Great — Solid demand with manageable competition. Consider entering."
+    elif score >= 55:
+        verdict = "Good — Moderate opportunity. Differentiate to stand out."
+    elif score >= 40:
+        verdict = "Okay — Mixed signals. Do deeper keyword research before committing."
+    elif score >= 25:
+        verdict = "Weak — Saturated or low-demand niche. Look for a sub-niche angle."
+    else:
+        verdict = "Poor — High competition, low demand. Avoid or find a different niche."
+
+    return {
+        "score": score,
+        "band": band,
+        "verdict": verdict,
+        "breakdown": {
+            "demand": round(demand, 1),
+            "demand_weight": "35%",
+            "demand_contrib": round(demand * 0.35, 1),
+            "competition": round(competition, 1),
+            "competition_weight": "30%",
+            "competition_contrib": round(competition * 0.30, 1),
+            "pricing": round(pricing, 1),
+            "pricing_weight": "15%",
+            "pricing_contrib": round(pricing * 0.15, 1),
+            "dominance_penalty": penalty,
+            "dominance_weight": "-25%",
+            "dominance_contrib": -penalty,
+            "product_count": len(products),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
 # Empty-Result Diagnostics & Query Broadening
 # ---------------------------------------------------------------------------
 _COMMON_STOP_WORDS: set = {

@@ -517,6 +517,44 @@ def setup_log_capture() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Welcome Screen
+# ---------------------------------------------------------------------------
+def show_welcome_screen():
+    """Render the landing hero when no pipeline has run yet."""
+    st.markdown("""
+    <div class="gradient-glow" style="padding: 3rem 2rem; border-radius: 24px; margin-bottom: 1.5rem;">
+        <h1 style="font-size: 3rem; font-weight: 800; letter-spacing: -1px; margin: 0; line-height: 1.2;">
+            🚀 KDP Discovery Engine<br><span style="font-size:1.6rem;font-weight:400;color:#94a3b8;">Intelligence Core</span>
+        </h1>
+    </div>
+    """, unsafe_allow_html=True)
+
+    cols = st.columns([3, 2])
+    with cols[0]:
+        st.markdown("""
+        أهلاً بك في نظام الذكاء الاصطناعي لتحليل أسواق KDP.
+
+        **كيف يعمل النظام؟**
+        1. **الاستطلاع:** نقوم بجلب بيانات لحظية من Amazon عبر Pangolinfo API.
+        2. **التحليل:** يقوم محركنا (The Brain) بحساب "درجة النيش" (Niche Score) بناءً على التنافسية، الطلب، وتوزيع المبيعات.
+        3. **التنفيذ:** نحول الفرص الذهبية إلى ملفات تصميم جاهزة للرفع على Canva بضغطة زر.
+
+        ---
+        ### 💡 نصيحة احترافية:
+        * ابحث عن نيشات بدرجة **(70+)** لضمان سرعة الانتشار.
+        * استخدم ميزة **Bulk CSV** لتحويل أفكارك إلى كتب جاهزة في دقائق.
+        """)
+
+    with cols[1]:
+        st.markdown("#### لوحة مؤشرات الأداء")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric("Pangolinfo Status", "Connected ✅")
+        with c2:
+            st.metric("Design Engine", "Ready 🎨")
+
+
+# ---------------------------------------------------------------------------
 # Pipeline runner — yields status updates
 # ---------------------------------------------------------------------------
 def run_pipeline_dashboard(
@@ -554,70 +592,38 @@ def run_pipeline_dashboard(
     progress_bar = st.progress(0, text="Pipeline starting...")
     status = st.status("Pipeline running...", expanded=True)
 
-    # -- Validate API key before spending credits --------------------------
-    stash_log("Validating SerpApi key...")
-    key_check = scraper.verify_api_key(api_key or scraper.SERPAPI_KEY)
-    if not key_check["valid"]:
-        stash_log(f"API KEY ERROR: {key_check['error']}")
+    # -- Validate Pangolinfo token before spending credits ------------------
+    stash_log("Validating Pangolinfo token...")
+    pangolinfo_token = os.environ.get("PANGOLINFO_TOKEN") or scraper.PANGOLINFO_TOKEN
+    if not pangolinfo_token:
+        stash_log("PANGOLINFO_TOKEN missing.")
         st.session_state["stage1_status"] = "failed"
         results["error"] = (
-            f"**Invalid SerpApi key.** {key_check['error']} "
-            "Go to **Settings** tab → SerpApi Key to enter a valid key, "
-            "or enable **Demo Mode** to explore the tool without an API key."
+            "**Pangolinfo token not configured.** "
+            "Set PANGOLINFO_TOKEN in config.ini or .env file."
         )
         return results
-    stash_log(f"API key valid. Credits remaining: {key_check.get('remaining', 'unknown')}")
+    stash_log("Pangolinfo token found.")
 
-    # -- Stage 1: Scrape --------------------------------------------------
+    # -- Stage 1: Scrape via Pangolinfo ------------------------------------
     st.session_state["stage1_status"] = "running"
     try:
-        if amazon_url:
-            stash_log(f"Using Amazon URL instead of keyword search: {amazon_url[:80]}...")
-            status.update(label="Scraping Amazon URL...")
-            progress_bar.progress(10, text="Fetching Amazon URL...")
-            raw = scraper.fetch_category_url(url=amazon_url, api_key=api_key or scraper.SERPAPI_KEY)
-            if raw is None:
-                stash_log("URL scrape returned None — check SerpApi key.")
-                scraped_rows = []
-            elif "error" in raw:
-                stash_log(f"URL scrape error: {raw['error']}")
-                results["error"] = raw["error"]
-                scraped_rows = []
-            else:
-                scraped_rows = scraper.format_data_for_csv(raw)
-                scraper.save_results(query, raw, scraped_rows)
-                stash_log(f"URL scrape: {len(scraped_rows)} products found.")
-        elif max_pages > 1:
-            stash_log(f"Batch mode: fetching {max_pages} pages ...")
-            status.update(label=f"Scraping {max_pages} pages...")
-
-            def page_progress(current: int, total: int) -> None:
-                pct = int((current / total) * 55)
-                progress_bar.progress(pct, text=f"Scraping page {current}/{total}...")
-
-            scraped_rows = scraper.fetch_all_pages(
-                query=query,
-                max_pages=max_pages,
-                api_key=api_key or scraper.SERPAPI_KEY,
-                domain=domain,
-                filter_params=filter_params,
-                progress_callback=page_progress,
-            )
-            if scraped_rows:
-                scraper.save_results(
-                    query,
-                    {"query": query, "max_pages": max_pages, "organic_results": [], "formatted_rows": scraped_rows},
-                    scraped_rows,
-                )
+        stash_log(f"Searching Pangolinfo for: {query[:80]}...")
+        status.update(label="Searching Pangolinfo...")
+        progress_bar.progress(10, text="Fetching Amazon data...")
+        raw = scraper.fetch_category_url(keyword=query, marketplace="amz_us")
+        if raw is None:
+            stash_log("Pangolinfo scrape returned None.")
+            scraped_rows = []
+        elif isinstance(raw, dict) and "error" in raw:
+            stash_log(f"Pangolinfo error: {raw['error']}")
+            results["error"] = raw["error"]
+            scraped_rows = []
         else:
-            stash_log("Single-page mode ...")
-            scraped_rows = scraper.search_and_format(
-                query=query,
-                api_key=api_key or scraper.SERPAPI_KEY,
-                domain=domain,
-                save=True,
-                filter_params=filter_params,
-            )
+            scraped_rows = scraper.normalize_pangolinfo_results(raw)
+            if scraped_rows:
+                scraper.save_results(query, raw, scraped_rows)
+            stash_log(f"Pangolinfo scrape: {len(scraped_rows)} products found.")
     except Exception as exc:
         stash_log(f"SCRAPE FAILED: {exc}")
         st.session_state["stage1_status"] = "failed"
@@ -1087,24 +1093,27 @@ with st.sidebar:
     )
     st.session_state["high_contrast"] = high_contrast
 
-    # API key status — prominent but not scary for demo mode
-    api_key_configured = config_manager.get_serpapi_key() != "YOUR_SERPAPI_KEY_HERE" if MODULES_OK else False
-    if use_sample_data or api_key_configured:
+    # Pangolinfo token status
+    pangolinfo_token = os.environ.get("PANGOLINFO_TOKEN") or (scraper.PANGOLINFO_TOKEN if MODULES_OK else "")
+    if pangolinfo_token:
         status_color = "#4CAF50"
-        status_text = "Ready"
+        status_text = "Connected ✅"
     else:
         status_color = "#FF9800"
-        status_text = "Not configured — add in Settings"
+        status_text = "Not configured — add PANGOLINFO_TOKEN in .env"
 
     st.markdown(
         f"<div style='font-size:0.75rem;color:{status_color};'>"
-        f":key: SerpApi: {status_text}</div>",
+        f":key: Pangolinfo: {status_text}</div>",
         unsafe_allow_html=True,
     )
 
 # ---------------------------------------------------------------------------
 # Main area
 # ---------------------------------------------------------------------------
+if not st.session_state.get("pipeline_results"):
+    show_welcome_screen()
+
 tab_names = [
     "📊 Data Table",
     "🧭 Opportunity Explorer",
@@ -1225,34 +1234,35 @@ def _display_results(results: Optional[Dict[str, Any]], query: str, sheet_id: st
             unsafe_allow_html=True,
         )
 
-    # -- Market Gauge: Niche Scoring Intelligence -----------------------------
+    # -- Intelligence Panel: Market Score (Pangolinfo-optimized) ---------------
     if ranked_rows:
-        niche_score = analyzer.calculate_niche_score(ranked_rows)
-        st.markdown("### :bar_chart: Market Gauge — Niche Quality Score")
+        market = analyzer.calculate_market_score(ranked_rows)
+        st.markdown("### :bar_chart: Intelligence Panel — Niche Score")
 
         gauge_cols = st.columns([3, 2])
         with gauge_cols[0]:
-            total = niche_score["total_score"]
-            verdict = niche_score["verdict"]
-            color = "#4CAF50" if total >= 70 else "#FF9800" if total >= 40 else "#F44336"
+            score = market["score"]
+            band = market["band"]
+            color = "#4CAF50" if score >= 70 else "#FF9800" if score >= 40 else "#F44336"
             st.markdown(
                 f"<div style='text-align:center;padding:12px;'>"
-                f"<div style='font-size:2.8rem;font-weight:800;color:{color};'>{total:.0f}</div>"
-                f"<div style='font-size:1.1rem;color:#aaa;margin-top:-6px;'>{verdict}</div>"
+                f"<div style='font-size:2.8rem;font-weight:800;color:{color};'>{score}</div>"
+                f"<div style='font-size:1.1rem;color:#aaa;margin-top:-6px;'>{band}</div>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
-            st.progress(total / 100)
+            st.progress(score / 100)
+            st.caption(market["verdict"])
 
         with gauge_cols[1]:
-            sig = niche_score["signals"]
+            bd = market["breakdown"]
             st.markdown(
                 f"<div style='font-size:0.85rem;'>"
-                f"<div><span style='color:#4CAF50;'>▬</span> Demand: <b>{sig['demand_score']:.0f}</b></div>"
-                f"<div><span style='color:#2196F3;'>▬</span> Competition: <b>{sig['competition_score']:.0f}</b></div>"
-                f"<div><span style='color:#FF9800;'>▬</span> Pricing: <b>{sig['pricing_score']:.0f}</b></div>"
-                f"<div><span style='color:#9C27B0;'>▬</span> Recency Bonus: <b>{sig['recency_bonus']:.0f}</b></div>"
-                f"<div><span style='color:#F44336;'>▬</span> Dominance Penalty: <b>-{sig['dominance_penalty']:.0f}</b></div>"
+                f"<div><span style='color:#4CAF50;'>▬</span> Demand: <b>{bd['demand']:.0f}</b> ({bd['demand_weight']} → <b>{bd['demand_contrib']:.0f}</b>)</div>"
+                f"<div><span style='color:#2196F3;'>▬</span> Competition: <b>{bd['competition']:.0f}</b> ({bd['competition_weight']} → <b>{bd['competition_contrib']:.0f}</b>)</div>"
+                f"<div><span style='color:#FF9800;'>▬</span> Pricing: <b>{bd['pricing']:.0f}</b> ({bd['pricing_weight']} → <b>{bd['pricing_contrib']:.0f}</b>)</div>"
+                f"<div><span style='color:#F44336;'>▬</span> Dominance Penalty: <b>-{bd['dominance_penalty']:.0f}</b> ({bd['dominance_weight']} → <b>{bd['dominance_contrib']:.0f}</b>)</div>"
+                f"<div style='margin-top:6px;font-size:0.75rem;color:#666;'>Products scored: {bd['product_count']}</div>"
                 f"</div>",
                 unsafe_allow_html=True,
             )

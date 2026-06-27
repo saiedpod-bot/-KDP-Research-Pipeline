@@ -64,6 +64,10 @@ logger = logging.getLogger("kdpscraper")
 # Reads from .env → env var → fallback placeholder.
 SERPAPI_KEY: str = os.getenv("SERPAPI_KEY", "YOUR_SERPAPI_KEY_HERE")
 
+# Pangolinfo Amazon Scrape API token
+PANGOLINFO_TOKEN: str = os.getenv("PANGOLINFO_TOKEN", "")
+PANGOLINFO_API_URL: str = "https://scrapeapi.pangolinfo.com/api/v1/scrape"
+
 # Amazon marketplace domain — change per target region
 AMAZON_DOMAIN: str = "amazon.com"
 
@@ -973,69 +977,168 @@ def extract_discovery_terms(
 
 
 # ---------------------------------------------------------------------------
-# Multi-Niche Tunneling — scrape category / bestseller pages via URL
+# Pangolinfo Amazon Scrape API — search by keyword
 # ---------------------------------------------------------------------------
 def fetch_category_url(
-    url: str,
-    api_key: str,
+    keyword: str,
+    marketplace: str = "amz_us",
     max_retries: int = 3,
 ) -> Optional[Dict[str, Any]]:
     """
-    Scrape an Amazon category or bestseller page by passing the full URL
-    to SerpApi's ``url`` parameter.
+    Scrape Amazon search results via Pangolinfo Amazon Scrape API.
 
-    This enables scraping of URLs like:
-      https://www.amazon.com/gp/bestsellers/books/...
-      https://www.amazon.com/s?rh=n:...
+    Uses the ``amzKeyword`` parser to return structured product data
+    (ASIN, Title, Price, Star, Rating, Sales) for a given keyword.
 
     Parameters
     ----------
-    url : str
-        Full Amazon URL (category page, bestseller list, search with filters).
-    api_key : str
-        Valid SerpApi key.
+    keyword : str
+        Amazon search keyword (e.g. "yoga anatomy coloring book").
+    marketplace : str
+        Amazon marketplace code (default: "amz_us").
+        Supported: amz_us, amz_uk, amz_de, amz_fr, amz_it, amz_es,
+                   amz_jp, amz_ca, amz_in, amz_com_au, amz_mx.
     max_retries : int
-        Number of retry attempts.
+        Number of retry attempts on network/server errors.
 
     Returns
     -------
     dict or None
-        Raw SerpApi response, or None on failure.
+        Raw Pangolinfo API response on success, or None on failure.
+        The response has the structure::
+
+            {
+              "data": { "json": [ { "data": { "results": [...] } } ] }
+            }
+
+        where each result contains ASIN, Title, Price, Star, Rating, Sales.
     """
-    params: Dict[str, Any] = {
-        "engine": "amazon",
-        "url": url,
+    import requests
+
+    api_token = os.getenv("PANGOLINFO_TOKEN") or PANGOLINFO_TOKEN
+    if not api_token:
+        logger.error("PANGOLINFO_TOKEN is not configured. Set it in config.ini or .env")
+        return {"error": "PANGOLINFO_TOKEN missing. Add it to config.ini or .env."}
+
+    payload = {
+        "parserName": "amzKeyword",
+        "site": marketplace,
+        "content": keyword,
+        "format": "json",
     }
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "Content-Type": "application/json",
+    }
+
     for attempt in range(1, max_retries + 1):
         try:
-            logger.info("Fetching category URL (attempt %d/%d) ...", attempt, max_retries)
-            client = Client(api_key=api_key)
-            raw: SerpResults = client.search(**params)
-            if "error" in raw:
-                logger.warning("Category URL error: %s", raw["error"])
+            logger.info(
+                "Pangolinfo scrape — keyword='%s' marketplace=%s (attempt %d/%d)",
+                keyword, marketplace, attempt, max_retries,
+            )
+            resp = requests.post(
+                PANGOLINFO_API_URL,
+                json=payload,
+                headers=headers,
+                timeout=30,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                results = data.get("data", {}).get("json", [])
+                logger.info(
+                    "Pangolinfo returned %d result groups for '%s'",
+                    len(results), keyword,
+                )
+                # Wrap in a structure compatible with format_data_for_csv
+                return data
+            else:
+                logger.warning(
+                    "Pangolinfo attempt %d/%d — HTTP %d: %s",
+                    attempt, max_retries, resp.status_code, resp.text[:200],
+                )
                 if attempt < max_retries:
                     time.sleep(REQUEST_DELAY)
-                continue
-            logger.info(
-                "Category URL fetched — %d organic results.",
-                len(raw.get("organic_results", [])),
-            )
-            return dict(raw)
-        except Exception as exc:
-            err_str = str(exc)
-            logger.warning(
-                "Category URL attempt %d/%d failed: %s", attempt, max_retries, err_str,
-            )
-            # Don't retry on auth errors — pointless
-            if "401" in err_str or "Unauthorized" in err_str:
-                logger.error("API key invalid (401). Stop retrying.")
-                return {"error": "API key rejected (401). Generate a new key at https://serpapi.com."}
-            if "403" in err_str or "Forbidden" in err_str:
-                logger.error("API key forbidden (403). Stop retrying.")
-                return {"error": "API key forbidden (403). Check SerpApi account status."}
+        except ImportError:
+            logger.error("requests library not installed. Run: pip install requests")
+            return {"error": "requests library not installed. Run: pip install requests"}
+        except requests.exceptions.Timeout:
+            logger.warning("Pangolinfo timeout attempt %d/%d", attempt, max_retries)
             if attempt < max_retries:
                 time.sleep(REQUEST_DELAY)
+        except Exception as exc:
+            logger.warning(
+                "Pangolinfo attempt %d/%d failed: %s", attempt, max_retries, exc,
+            )
+            if attempt < max_retries:
+                time.sleep(REQUEST_DELAY)
+            else:
+                logger.error("All %d attempts exhausted for '%s'", max_retries, keyword)
+                return None
+
     return None
+
+
+def normalize_pangolinfo_results(raw_json: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Extract and normalize product results from a Pangolinfo API response
+    into the unified schema expected by ``format_data_for_csv``.
+
+    The Pangolinfo ``amzKeyword`` parser returns results nested under::
+
+        data.json[0].data.results
+
+    Each result item is expected to have fields like:
+        ASIN, Title, Price, Star, Rating, Sales
+
+    Output schema (ASIN, Title, Author, Price, BSR, ReviewCount, Rating, ...)
+    is compatible with ``format_data_for_csv``.
+    """
+    items: List[Dict[str, Any]] = []
+
+    try:
+        json_list = raw_json.get("data", {}).get("json", [])
+        if not json_list:
+            logger.warning("Pangolinfo response has no 'data.json' array.")
+            return items
+
+        results = json_list[0].get("data", {}).get("results", [])
+        if not results:
+            logger.warning("Pangolinfo results empty.")
+            return items
+    except (AttributeError, IndexError, TypeError) as exc:
+        logger.error("Unexpected Pangolinfo structure: %s", exc)
+        return items
+
+    for raw in results:
+        try:
+            price = raw.get("Price", 0) or 0
+            if isinstance(price, str):
+                price = float(price.replace("$", "").replace(",", "").strip() or 0)
+
+            review_count = int(raw.get("Rating", 0) or 0)
+            rating = float(raw.get("Star", 0) or 0)
+
+            item = {
+                "ASIN": raw.get("ASIN", "N/A"),
+                "Title": (raw.get("Title") or "").strip(),
+                "Author": raw.get("Author", "Unknown") or "Unknown",
+                "Price": price,
+                "BSR": 0,
+                "ReviewCount": review_count,
+                "Rating": rating,
+                "PublicationDate": raw.get("PublicationDate", ""),
+                "Position": len(items) + 1,
+                "thumbnail": raw.get("ImageUrl", raw.get("imageUrl", "")),
+                "Sales": raw.get("Sales", 0) or 0,
+            }
+            items.append(item)
+        except Exception as exc:
+            logger.warning("Skipping Pangolinfo item: %s", exc)
+            continue
+
+    logger.info("Normalized %d Pangolinfo items.", len(items))
+    return items
 
 
 def tunnel_category_pages(
