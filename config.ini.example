@@ -1,0 +1,58 @@
+; ============================================================================
+; KDP Discovery Engine Pro — Configuration Template
+; ============================================================================
+; Copy this file to config.ini in the application root directory and
+; fill in your API keys. config.ini is listed in .gitignore and will
+; never be committed to version control.
+;
+; All fields are optional — the app falls back to environment variables
+; if a setting is not found here.
+;
+; Get your free SerpApi key at: https://serpapi.com
+; ============================================================================
+
+[API Keys]
+; SerpApi key — required for live Amazon search (free: 100 searches/month)
+SERPAPI_KEY=your_serpapi_key_here
+
+; Google Sheets ID — optional, enables exporting results to a Google Sheet
+GOOGLE_SHEET_ID=
+
+; Google Cloud API key — for Imagen image generation (Design Studio)
+; Get from: https://console.cloud.google.com/apis/credentials
+GOOGLE_CLOUD_API_KEY=
+
+; Google Cloud project ID — for Imagen image generation
+GOOGLE_CLOUD_PROJECT=
+
+[Marketplace]
+; Default Amazon marketplace domain
+; Supported: amazon.com, amazon.co.uk, amazon.de, amazon.co.jp,
+;            amazon.ca, amazon.com.au, amazon.in, amazon.com.mx,
+;            amazon.it, amazon.es, amazon.fr
+AMAZON_DOMAIN=amazon.com
+
+[Application]
+; Interface theme: "dark" or "light"
+THEME=dark
+
+; Interface language: "en" (English) or "ar" (Arabic)
+LANGUAGE=en
+
+; Enable high-contrast mode for accessibility: "true" or "false"
+HIGH_CONTRAST=false
+
+; Maximum search pages (1–20)
+MAX_PAGES=3
+
+; Minimum product price filter
+MIN_PRICE=7.00
+
+[Paths]
+; Override the default data directory (SQLite database, logs, cache)
+; Leave blank to use the application's /data directory
+KDP_DATA_DIR=
+
+; Override the default assets directory (icons, images, CSS)
+; Leave blank to use the application's /assets directory
+KDP_ASSETS_DIR=

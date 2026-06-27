@@ -1,85 +1,58 @@
-# Security Policy — KDP Research Pipeline
+# Security Policy
+
+## Supported Versions
+
+| Version | Supported |
+|---|---|
+| 2.0.x | ✅ |
+| < 2.0 | ❌ |
 
 ## Credential Management
 
-**No credentials are ever hardcoded.** All sensitive values are handled through environment variables, `.env` files, or GitHub Repository Secrets.
+**No credentials are ever hardcoded.** All sensitive values are handled through:
 
-## For Local Development
+1. **`config.ini`** — user configuration file (listed in `.gitignore`)
+2. **`.env`** — legacy environment file (listed in `.gitignore`)
+3. **Environment variables** — `SERPAPI_KEY`, `GOOGLE_SHEET_ID`, etc.
 
-### 1. SerpApi Key
+### For Local Development
 
-```bash
-cp .env.example .env
-```
+#### 1. SerpApi Key
 
-Edit `.env`:
+Obtain a free API key from [SerpApi](https://serpapi.com) (100 searches/month free).
 
-```ini
-SERPAPI_KEY=your_serpapi_key_here
-```
+Set it using one of the following methods (listed in order of precedence):
 
-`.env` is listed in `.gitignore` and will never be committed.
+- **config.ini**: Add `SERPAPI_KEY=your_key` to your `config.ini`
+- **Environment variable**: `$env:SERPAPI_KEY="your_key"` (PowerShell) or `export SERPAPI_KEY="your_key"` (bash)
 
-### 2. Google Sheets (Optional)
+#### 2. Google Sheets (Optional)
 
-If using Google Sheets export:
-1. Create a service account in [Google Cloud Console](https://console.cloud.google.com)
-2. Download the JSON key as `credentials.json`
-3. Place it in the project root
-4. Reference it in `.env`:
-
-```ini
-GOOGLE_APPLICATION_CREDENTIALS=credentials.json
-```
-
-`credentials.json` is listed in `.gitignore` and will never be committed.
-
-## For CI/CD (GitHub Actions)
-
-### Setting Repository Secrets
-
-1. Go to **GitHub repo → Settings → Secrets and variables → Actions**
-2. Click **New repository secret**
-3. Add:
-
-| Secret Name | Value | Required For |
-|-------------|-------|-------------|
-| `SERPAPI_KEY` | Your SerpApi key | Integration tests (optional) |
-
-The `GITHUB_TOKEN` secret is **automatically injected** by GitHub into all workflows — no manual setup needed.
-
-### How Secrets Flow in CI
-
-```
-Your Secret → GitHub Encrypted Store → ${{ secrets.NAME }} in workflow → Runtime env var
-```
-
-Secrets are:
-- Encrypted at rest by GitHub
-- Masked in all logs
-- Never exposed in build output
-- Only accessible to workflows in the same repository
-
-## For Docker (ghcr.io)
-
-When running the Docker image, pass credentials via environment variables:
-
-```bash
-docker run -p 8501:8501 \
-  -e SERPAPI_KEY=your_key_here \
-  ghcr.io/saiedpod-bot/kdp-research-pipeline:latest
-```
-
-For Docker Compose, use an `.env` file (gitignored):
-
-```yaml
-# docker-compose.yml
-services:
-  kdp-pipeline:
-    image: ghcr.io/saiedpod-bot/kdp-research-pipeline:latest
-    env_file: .env
-```
+- Create a Google Cloud service account
+- Download the JSON credentials file
+- Share your target Google Sheet with the service account email
+- Do **not** commit the credentials file — add it to `.gitignore`
 
 ## Reporting a Vulnerability
 
-If you find a security issue, please open a private issue or contact the repository owner directly. Do not post credentials or tokens in public issues.
+If you discover a security vulnerability, please **do not** open a public issue. Instead, report it privately by emailing the project maintainers.
+
+We will acknowledge receipt within 48 hours and provide a timeline for a fix.
+
+## Best Practices
+
+- **Never commit** `config.ini`, `.env`, or `credentials.json` to version control
+- **Rotate API keys** regularly via the SerpApi dashboard
+- **Revoke compromised keys** immediately
+- **Use a virtual environment** to isolate dependencies
+
+## .gitignore Protection
+
+The following files are protected by `.gitignore` and will never be committed:
+
+- `.env` — environment variables
+- `config.ini` — user configuration
+- `credentials.json` — Google service account keys
+- `*.db` — SQLite databases
+- `*.log` — log files
+- `dist/`, `build/`, `dist_obfuscated/` — build artifacts

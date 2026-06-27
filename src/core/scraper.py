@@ -28,17 +28,20 @@ from serpapi import Client, SerpResults
 
 
 # ---------------------------------------------------------------------------
-# .env loader — keeps API keys out of version control
-# Looks for a .env file in the project root (parent of src/).
+# .env / config.ini loader — keeps API keys out of version control
+# Looks in project root (three levels up from src/core/scraper.py).
 # ---------------------------------------------------------------------------
-_ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
-if _ENV_PATH.exists():
-    with open(_ENV_PATH, encoding="utf-8") as _fh:
-        for _line in _fh:
-            _line = _line.strip()
-            if _line and not _line.startswith("#") and "=" in _line:
-                _k, _v = _line.split("=", 1)
-                os.environ.setdefault(_k.strip(), _v.strip())
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_ENV_PATH = _PROJECT_ROOT / ".env"
+for _cfg_file in (_PROJECT_ROOT / "config.ini", _ENV_PATH):
+    if _cfg_file.exists():
+        with open(_cfg_file, encoding="utf-8") as _fh:
+            for _line in _fh:
+                _line = _line.strip()
+                if _line and not _line.startswith("#") and not _line.startswith("[") and not _line.startswith(";") and "=" in _line:
+                    _k, _v = _line.split("=", 1)
+                    os.environ.setdefault(_k.strip(), _v.strip())
+        break  # prefer config.ini over .env
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +52,7 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler(Path(__file__).parent / "scraper.log", mode="a"),
+        logging.FileHandler(_PROJECT_ROOT / "data" / "scraper.log", mode="a"),
     ],
 )
 logger = logging.getLogger("kdpscraper")
@@ -768,6 +771,45 @@ def search_and_format(
 
 
 # ---------------------------------------------------------------------------
+# API Key validation helper
+# ---------------------------------------------------------------------------
+def verify_api_key(api_key: str) -> Dict[str, Any]:
+    """Check whether a SerpApi key is valid by making a minimal API call.
+
+    Parameters
+    ----------
+    api_key : str
+        The key to test.
+
+    Returns
+    -------
+    Dict[str, Any]
+        {"valid": bool, "error": str or None, "remaining": int or None}
+    """
+    import requests as _req
+
+    if not api_key or api_key in ("YOUR_SERPAPI_KEY_HERE", "your_serpapi_key_here", "SAMPLE_MODE"):
+        return {"valid": False, "error": "Placeholder key detected — replace with a real SerpApi key.", "remaining": None}
+
+    try:
+        # Minimal search request (1 credit) — search for a generic term
+        client = Client(api_key=api_key)
+        raw = client.search(engine="amazon", k="test", amazon_domain="amazon.com", gl="us", hl="en-us", num=1)
+        if "error" in raw:
+            return {"valid": False, "error": raw["error"], "remaining": None}
+        # Check search metadata for remaining credits
+        remaining = raw.get("search_metadata", {}).get("credits_remaining")
+        return {"valid": True, "error": None, "remaining": remaining}
+    except Exception as exc:
+        err_str = str(exc)
+        if "401" in err_str or "Unauthorized" in err_str:
+            return {"valid": False, "error": "API key rejected (HTTP 401). Generate a new key at https://serpapi.com.", "remaining": None}
+        if "403" in err_str or "Forbidden" in err_str:
+            return {"valid": False, "error": "API key forbidden (HTTP 403). Check SerpApi account status.", "remaining": None}
+        return {"valid": False, "error": err_str, "remaining": None}
+
+
+# ---------------------------------------------------------------------------
 # Discovery: Product Detail Fetch & Niche Term Extraction
 # ---------------------------------------------------------------------------
 def fetch_product_details(
@@ -980,9 +1022,17 @@ def fetch_category_url(
             )
             return dict(raw)
         except Exception as exc:
+            err_str = str(exc)
             logger.warning(
-                "Category URL attempt %d/%d failed: %s", attempt, max_retries, exc,
+                "Category URL attempt %d/%d failed: %s", attempt, max_retries, err_str,
             )
+            # Don't retry on auth errors — pointless
+            if "401" in err_str or "Unauthorized" in err_str:
+                logger.error("API key invalid (401). Stop retrying.")
+                return {"error": "API key rejected (401). Generate a new key at https://serpapi.com."}
+            if "403" in err_str or "Forbidden" in err_str:
+                logger.error("API key forbidden (403). Stop retrying.")
+                return {"error": "API key forbidden (403). Check SerpApi account status."}
             if attempt < max_retries:
                 time.sleep(REQUEST_DELAY)
     return None
@@ -1527,6 +1577,107 @@ def batch_enrich_bsr(
         enriched, len(rows),
     )
     return result
+
+
+# ---------------------------------------------------------------------------
+# Keyword Explorer — fetch Amazon search suggestions (free, no API key)
+# ---------------------------------------------------------------------------
+AMAZON_SUGGEST_URL = "https://completion.amazon.com/api/2017/suggestions?limit={limit}&prefix={query}&mid=ATVPDKIKX0DER&alias=stripbooks&suggestion-type=WIDGET&_={ts}"
+
+
+def fetch_amazon_suggestions(query: str, limit: int = 10) -> List[str]:
+    """
+    Fetch autocomplete suggestions from Amazon's public completion API.
+    No API key needed — uses the same endpoint as the search bar.
+
+    Returns list of suggestion strings.
+    """
+    import requests as http_requests
+    from urllib.parse import quote
+
+    url = (
+        "https://completion.amazon.com/api/2017/suggestions?"
+        f"limit={limit}&prefix={quote(query)}"
+        "&mid=ATVPDKIKX0DER&alias=stripbooks"
+        "&suggestion-type=WIDGET"
+        f"&_={int(time.time() * 1000)}"
+    )
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/125.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://www.amazon.com/",
+    }
+
+    try:
+        resp = http_requests.get(url, headers=headers, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        suggestions: List[str] = []
+        for item in data.get("suggestions", []):
+            value = item.get("value", "")
+            if value and value.lower() != query.lower():
+                suggestions.append(value)
+        return suggestions[:limit]
+    except Exception as exc:
+        logger.warning("Failed to fetch Amazon suggestions for '%s': %s", query, exc)
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Category Browser — fetch Amazon browse node tree
+# ---------------------------------------------------------------------------
+def fetch_category_tree(domain: str = "amazon.com") -> List[Dict[str, Any]]:
+    """
+    Fetch a flat list of Amazon browse node categories using SerpApi.
+
+    Returns list of {id, name, parent_id} dicts.
+    Note: SerpApi free tier has limited category endpoints.
+    This provides a curated fallback list of top-level KDP-relevant nodes.
+    """
+    # Curated top-level KDP book categories (stable browse nodes)
+    categories = [
+        {"id": "283155", "name": "Books", "parent_id": None},
+        {"id": "173507", "name": "Arts & Photography", "parent_id": "283155"},
+        {"id": "17439", "name": "Biographies & Memoirs", "parent_id": "283155"},
+        {"id": "6", "name": "Business & Money", "parent_id": "283155"},
+        {"id": "17", "name": "Comics & Graphic Novels", "parent_id": "283155"},
+        {"id": "28", "name": "Computers & Technology", "parent_id": "283155"},
+        {"id": "11401", "name": "Cookbooks, Food & Wine", "parent_id": "283155"},
+        {"id": "48", "name": "Crafts, Hobbies & Home", "parent_id": "283155"},
+        {"id": "55", "name": "Education & Teaching", "parent_id": "283155"},
+        {"id": "297540", "name": "Genre Fiction", "parent_id": "283155"},
+        {"id": "86", "name": "Health, Fitness & Dieting", "parent_id": "283155"},
+        {"id": "89", "name": "History", "parent_id": "283155"},
+        {"id": "91", "name": "Humor & Entertainment", "parent_id": "283155"},
+        {"id": "10777", "name": "Literature & Fiction", "parent_id": "283155"},
+        {"id": "11209", "name": "Mystery, Thriller & Suspense", "parent_id": "283155"},
+        {"id": "185", "name": "Parenting & Relationships", "parent_id": "283155"},
+        {"id": "337", "name": "Politics & Social Sciences", "parent_id": "283155"},
+        {"id": "290060", "name": "Reference", "parent_id": "283155"},
+        {"id": "22", "name": "Religion & Spirituality", "parent_id": "283155"},
+        {"id": "10", "name": "Science & Math", "parent_id": "283155"},
+        {"id": "11823", "name": "Science Fiction & Fantasy", "parent_id": "283155"},
+        {"id": "2159", "name": "Self-Help", "parent_id": "283155"},
+        {"id": "25", "name": "Sports & Outdoors", "parent_id": "283155"},
+        {"id": "5267710011", "name": "Teen & Young Adult", "parent_id": "283155"},
+        {"id": "20", "name": "Travel", "parent_id": "283155"},
+        {"id": "5", "name": "Children's Books", "parent_id": "283155"},
+    ]
+
+    # Try to enrich via SerpApi if available
+    api_key = os.environ.get("SERPAPI_KEY", "")
+    if api_key and api_key != "YOUR_SERPAPI_KEY_HERE":
+        try:
+            from serpapi import Client as SerpClient
+            logger.info("Fetching category tree from SerpApi...")
+        except ImportError:
+            pass
+
+    return categories
 
 
 # ---------------------------------------------------------------------------

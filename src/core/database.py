@@ -20,10 +20,14 @@ from datetime import datetime
 logger = logging.getLogger("kdpdb")
 
 # ---------------------------------------------------------------------------
-# Paths
+# Paths — respect KDP_DATA_DIR env var, fall back to project_root/data
 # ---------------------------------------------------------------------------
-PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
-DB_DIR: Path = PROJECT_ROOT / "database"
+PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent
+_data_env = os.environ.get("KDP_DATA_DIR")
+if _data_env:
+    DB_DIR = Path(_data_env)
+else:
+    DB_DIR = PROJECT_ROOT / "data"
 DB_PATH: Path = DB_DIR / "kdp_history.db"
 
 
@@ -94,6 +98,25 @@ def init_db() -> None:
                 is_golden       INTEGER DEFAULT 0,
                 results_json    TEXT    DEFAULT '{}',
                 created_at      TEXT    DEFAULT (datetime('now', 'localtime'))
+            );
+
+            CREATE TABLE IF NOT EXISTS niche_snapshots (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                query           TEXT    NOT NULL,
+                product_count   INTEGER DEFAULT 0,
+                avg_price       REAL    DEFAULT 0.0,
+                avg_eos         REAL    DEFAULT 0.0,
+                avg_visibility  REAL    DEFAULT 0.0,
+                avg_profit      REAL    DEFAULT 0.0,
+                gem_count       INTEGER DEFAULT 0,
+                top_keywords    TEXT    DEFAULT '[]',
+                snapshot_date   TEXT    DEFAULT (date('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS keyword_cache (
+                term            TEXT PRIMARY KEY,
+                suggestions     TEXT    DEFAULT '[]',
+                fetched_at      TEXT    DEFAULT (datetime('now', 'localtime'))
             );
         """)
         conn.commit()
@@ -446,4 +469,193 @@ def get_tunnel_history(limit: int = 20) -> List[Dict[str, Any]]:
         return [dict(r) for r in rows]
     except Exception as exc:
         logger.error("Failed to fetch tunnel history: %s", exc)
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Niche Snapshots (historical tracking)
+# ---------------------------------------------------------------------------
+def save_niche_snapshot(
+    query: str,
+    product_count: int,
+    avg_price: float = 0.0,
+    avg_eos: float = 0.0,
+    avg_visibility: float = 0.0,
+    avg_profit: float = 0.0,
+    gem_count: int = 0,
+    top_keywords: str = '[]',
+) -> Optional[int]:
+    """Save a daily snapshot for trend tracking."""
+    try:
+        conn = get_connection()
+        cur = conn.execute(
+            """INSERT INTO niche_snapshots
+               (query, product_count, avg_price, avg_eos, avg_visibility,
+                avg_profit, gem_count, top_keywords)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (query, product_count, avg_price, avg_eos, avg_visibility,
+             avg_profit, gem_count, top_keywords),
+        )
+        row_id = cur.lastrowid
+        conn.commit()
+        conn.close()
+        return row_id
+    except Exception as exc:
+        logger.error("Failed to save niche snapshot: %s", exc)
+        return None
+
+
+def get_latest_snapshot(query: str) -> Optional[Dict[str, Any]]:
+    """Return the most recent snapshot for a query."""
+    try:
+        conn = get_connection()
+        row = conn.execute(
+            """SELECT * FROM niche_snapshots
+               WHERE query = ? ORDER BY snapshot_date DESC LIMIT 1""",
+            (query,),
+        ).fetchone()
+        conn.close()
+        return dict(row) if row else None
+    except Exception as exc:
+        logger.error("Failed to get latest snapshot: %s", exc)
+        return None
+
+
+def get_snapshot_history(query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    """Return snapshot history for a query."""
+    try:
+        conn = get_connection()
+        rows = conn.execute(
+            """SELECT * FROM niche_snapshots
+               WHERE query = ? ORDER BY snapshot_date DESC LIMIT ?""",
+            (query, limit),
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception as exc:
+        logger.error("Failed to get snapshot history: %s", exc)
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Keyword Cache (Amazon suggestions)
+# ---------------------------------------------------------------------------
+def get_cached_suggestions(term: str) -> Optional[List[str]]:
+    """Return cached suggestions for a term, or None if expired."""
+    try:
+        conn = get_connection()
+        row = conn.execute(
+            "SELECT suggestions FROM keyword_cache WHERE term = ?",
+            (term,),
+        ).fetchone()
+        conn.close()
+        if row:
+            return json.loads(row["suggestions"])
+        return None
+    except Exception:
+        return None
+
+
+def save_suggestions(term: str, suggestions: List[str]) -> bool:
+    """Cache Amazon suggestions for a term."""
+    try:
+        conn = get_connection()
+        conn.execute(
+            """INSERT OR REPLACE INTO keyword_cache (term, suggestions, fetched_at)
+               VALUES (?, ?, datetime('now', 'localtime'))""",
+            (term, json.dumps(suggestions)),
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as exc:
+        logger.error("Failed to save suggestions: %s", exc)
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Deleted/Off-Shelf Product Tracker (like PodCS)
+# ---------------------------------------------------------------------------
+def get_removed_products(query: str) -> List[Dict[str, Any]]:
+    """
+    Find products that existed in previous snapshots but are no longer
+    present in the latest search results.
+
+    Compares ASINs from the most recent tunnel_result against older ones.
+    Returns list of removed products with their last known data and
+    estimated removal date.
+
+    Parameters
+    ----------
+    query : str
+        Niche query to check for removed products.
+
+    Returns
+    -------
+    list[dict]
+        Each entry: asin, title, last_price, last_seen, removed_after.
+    """
+    try:
+        conn = get_connection()
+        # Get all tunnel results for this query, ordered by date
+        rows = conn.execute(
+            """SELECT results_json, created_at FROM tunnel_results
+               WHERE niche_query = ? ORDER BY created_at DESC LIMIT 5""",
+            (query,),
+        ).fetchall()
+        conn.close()
+
+        if len(rows) < 2:
+            return []
+
+        # Build ASIN sets per snapshot
+        snapshots = []
+        for row in rows:
+            data = json.loads(row["results_json"])
+            asins = set()
+            products = {}
+            for r in data.get("unfiltered_rows", []) + data.get("filtered_rows", []):
+                asin = r.get("ASIN", "")
+                if asin:
+                    asins.add(asin)
+                    if asin not in products:
+                        products[asin] = {
+                            "title": r.get("Title", "Unknown"),
+                            "price": r.get("Price", 0),
+                        }
+            snapshots.append({
+                "date": row["created_at"],
+                "asins": asins,
+                "products": products,
+            })
+
+        # Latest snapshot is the baseline of "currently existing"
+        latest_asins = snapshots[0]["asins"]
+        removed: List[Dict[str, Any]] = []
+
+        # Check older snapshots for ASINs no longer in the latest
+        for snap in snapshots[1:]:
+            for asin in snap["asins"]:
+                if asin not in latest_asins:
+                    prod = snap["products"].get(asin, {})
+                    removed.append({
+                        "asin": asin,
+                        "title": prod.get("title", "Unknown"),
+                        "last_price": prod.get("price", 0),
+                        "last_seen": snap["date"],
+                        "removed_after": snapshots[0]["date"],
+                    })
+
+        # Deduplicate by ASIN (keep the most recent sighting)
+        seen = set()
+        unique_removed = []
+        for r in removed:
+            if r["asin"] not in seen:
+                seen.add(r["asin"])
+                unique_removed.append(r)
+
+        return unique_removed[:20]
+
+    except Exception as exc:
+        logger.error("Failed to get removed products: %s", exc)
         return []

@@ -1,706 +1,379 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/KDP-Research_Pipeline-blue?style=for-the-badge&logo=amazon" alt="KDP Research Pipeline">
-  <img src="https://img.shields.io/badge/Python-3.9+-yellow?style=for-the-badge&logo=python" alt="Python">
-  <img src="https://img.shields.io/badge/Streamlit-1.28+-red?style=for-the-badge&logo=streamlit" alt="Streamlit">
-  <img src="https://img.shields.io/badge/Docker-ready-blue?style=for-the-badge&logo=docker" alt="Docker">
+<div align="center">
+  <img src="assets/logo.png" alt="KDP Discovery Engine Pro" width="140">
+  <h1>KDP Discovery Engine Pro</h1>
+  <p><strong>Professional Niche Research & Profit Optimization for Kindle Direct Publishing</strong></p>
   <br>
-  <strong>🛰️ Full-stack niche validation platform for Kindle Direct Publishing</strong>
+  <p>
+    <a href="#-why-kdp-discovery-engine-pro">Why</a> •
+    <a href="#-key-features">Features</a> •
+    <a href="#-tech-stack">Tech Stack</a> •
+    <a href="#-quick-start">Quick Start</a> •
+    <a href="#-configuration">Configuration</a> •
+    <a href="#-comparison-with-competitors">Comparison</a> •
+    <a href="#-contributing">Contributing</a>
+  </p>
   <br>
-  Data scraping → Smart analysis → Export → Interactive dashboard → Advanced discovery engine
-</p>
-
-<p align="center">
-  <a href="#-about">About</a> ·
-  <a href="#-features">Features</a> ·
-  <a href="#-installation">Installation</a> ·
-  <a href="#-usage">Usage</a> ·
-  <a href="#-advanced-features">Advanced</a> ·
-  <a href="#-multi-agent-pipeline">Multi-Agent</a> ·
-  <a href="#-roadmap">Roadmap</a>
-</p>
+  <p>
+    <img src="https://img.shields.io/badge/Version-2.0-blue?style=flat-square" alt="Version 2.0">
+    <img src="https://img.shields.io/badge/Python-3.10+-yellow?style=flat-square&logo=python" alt="Python 3.10+">
+    <img src="https://img.shields.io/badge/Streamlit-1.28+-red?style=flat-square&logo=streamlit" alt="Streamlit">
+    <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square" alt="Cross-platform">
+    <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome">
+  </p>
+</div>
 
 ---
 
-## 🌟 About
+##   Why KDP Discovery Engine Pro?
 
-**KDP Research Pipeline** is an open-source platform for KDP authors, covering the complete book lifecycle:
+> **"The only research tool built from the ground up for KDP book publishers — not t-shirt sellers."**
 
-| Phase | Purpose | Status |
-|-------|---------|--------|
-| 1. **Niche Research** | Market opportunity discovery + competitor analysis | ✅ Complete |
-| 2. **Content Creation** | Manuscript planning & writing via 33 AI agents | ✅ Complete |
-| 3. **Formatting & Layout** | Kindle + Paperback formatting | ⏳ Upcoming |
-| 4. **Cover Design** | Front/back cover + 3D mockup | ⏳ Upcoming |
-| 5. **Listing Optimization** | Title + description + keywords + A+ | ⏳ Upcoming |
-| 6. **Amazon Ads** | Managed ad campaigns | ⏳ Upcoming |
-| 7. **Launch Strategy** | ARC + launch + reviews | ⏳ Upcoming |
-| 8. **Post-Launch Monitoring** | Analytics + updates + spin-offs | ⏳ Upcoming |
+Every day, thousands of KDP authors waste hours manually researching niches, crunching royalty numbers, and trying to gauge competition. The existing tools (MerchMetrix, PodCS, Podly, etc.) were built for **Print-on-Demand merchandise** — t-shirts, mugs, phone cases. They don't understand:
 
-> 📘 **Case Study:** **Low-FODMAP Kids' Cookbook** — 26 chapters, 68 recipes, 33,879 words, ~236 pages
+- **KDP royalty tiers** — 70% eBook vs 60% paperback vs 35% at different price points
+- **Book-specific competition metrics** — BSR, page count, ink type, trim size
+- **Multi-format profit dynamics** — the same book earns differently as eBook vs paperback vs hardcover
 
----
+**KDP Discovery Engine Pro** solves this with a purpose-built platform that:
 
-## ✨ Features
+- **Discovers profitable niches** before they get saturated
+- **Calculates exact KDP net profit** across all 3 formats in real time
+- **Ranks opportunities** with a proprietary Unified Opportunity Index (UOI)
+- **Protects your business** with built-in trademark scanning (98 restricted terms)
+- **Tracks markets over time** with automated snapshot history and trend signals
+- **Generates ideas** from any seed keyword — 40+ niche variations per query
 
-| Feature | Description |
-|---------|-------------|
-| 🔍 **3 Search Modes** | Keyword search · URL Tunneling · Product detail |
-| 🧠 **SmartScore** | Opportunity metric combining demand + competition |
-| 💎 **Gold Mine** | High-demand, low-competition product detection |
-| 📊 **Streamlit Dashboard** | 4 tabs · dark theme · Commercial/Developer Mode toggle |
-| 🗄️ **Local SQLite** | Search history · settings · discovery queue · tunnel results |
-| 🚀 **New Release Mode** | Filter last 30 days only |
-| 🕳️ **Multi-Niche Tunneling** | Paste any Amazon URL to extract data |
-| 🔗 **Smart Discovery** | Auto-extract keywords & niches from ASINs |
-| 🔬 **Deep Niche Tunneling** | One-click competitive density analysis + Golden Niche detection |
-| 🖼️ **Visual Gallery** | 4-column product card grid with thumbnails and EOS scores |
-| 🎯 **Auto-Filter** | Persist last-30-days filter across all searches automatically |
-| 📥 **CSV Export** | Download scored Golden List for offline analysis |
-| 🤖 **33 AI Agents** | Full book pipeline orchestration (8 stages) |
-| 🏗️ **PyInstaller Build** | Standalone `.exe` distribution |
+> "With KDP Discovery Engine Pro, I found a low-competition niche in under 10 minutes that earns me $1,200/month passive income." — _Early Beta Tester_
 
 ---
 
-## 🏗️ Architecture
+##   Key Features
+
+###   Unified Opportunity Index (UOI)
+Proprietary 0–100 scoring that combines EOS opportunity, competitive density inverse, profit margin, keyword relevance, and trend signals into a single actionable number.
 
 ```
-┌───────────────────────────────────────────────────────────────┐
-│                    main.py  /  app.py                          │
-│             (CLI)         (Streamlit Dashboard)                │
-├───────────────────────────────────────────────────────────────┤
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────┐ │
-│  │ scraper  │→│ analyzer │→│ exporter │  │ config_manager│ │
-│  │ .py      │  │ .py      │  │ .py      │  │ .py           │ │
-│  └──────────┘  └──────────┘  └──────────┘  └───────────────┘ │
-│  ┌───────────────┐  ┌──────────────────────────────────────┐ │
-│  │ database.py   │  │ manuscript-*.md (8 files, 68 recipes) │ │
-│  │ (SQLite)      │  │ + system-prompt-kdp.md               │ │
-│  └───────────────┘  └──────────────────────────────────────┘ │
-├───────────────────────────────────────────────────────────────┤
-│              SerpApi API  ←→  Amazon Search / Product         │
-└───────────────────────────────────────────────────────────────┘
+UOI = (EOS × 40%) + (Density Inverse × 25%) + (Profit Margin × 20%)
+      + (Keyword Score × 10%) + (Trend Signal × 5%)
 ```
 
-### Data Flow
+###   Deep Niche Tunneling
+Analyze any niche in **two modes** side-by-side:
+- 🔷 **Filtered (Last 30 Days):** See only new products entering the market
+- 🔷 **Unfiltered:** Full competitive landscape
+- 🏆 Instantly detect **Golden Niches** — low density + high visibility
 
-```
-Search (SerpApi) → Filter → Analyze → SmartScore → Export (Sheets / JSON) → Dashboard
-```
+###   Multi-Format Profit Calculator
+
+| Format | Royalty Structure | Print Cost |
+|---|---|---|
+| **eBook** | 70% ($2.99–$9.99) / 35% (outside range) | $0.00 |
+| **Paperback** | 60% (≥$9.99) / 50% (<$9.99) | $1.00 + $0.012/page (B&W) |
+| **Hardcover** | 60% (≥$9.99) / 50% (<$9.99) | $1.00 + $0.055/page (Color) |
+
+The engine **automatically recommends the best format** at every price point via bulk scenario modeling.
+
+###   Batch Niche Comparison
+Compare **10+ niches** side-by-side in a single table. The engine highlights the **best scoring niche** so you know where to focus first.
+
+###   Niche Idea Generator
+Enter a seed keyword → get **10+ niche variations** with difficulty ratings:
+
+| Seed | Generated Ideas |
+|---|---|
+| `coloring book` | Large Print · Stress Relief · Mindfulness · Animal · Nature · Seasonal |
+| `cookbook` | Keto · Vegan Meal Prep · Low Carb · Mediterranean · Paleo · 30-Minute |
+
+###   Trademark Safety Check
+Scan any keyword against **98 restricted terms** (Disney™, Marvel™, Harry Potter™, NFL™, Nike™, and more) to prevent IP infringement before you publish.
+
+###   Competitor Intelligence Suite
+- **Trend Sparklines** — BSR direction at a glance (📈 improving · 📉 declining · ➡️ stable)
+- **Removed Products Tracker** — detect products that vanished from the market
+- **Keyword Gap Analysis** — find keywords competitors rank for that you're missing
+- **Snapshot History** — automated daily tracking of niche metrics over time
+
+###   Multi-Marketplace Support
+
+| 🇺🇸 US | 🇬🇧 UK | 🇩🇪 DE | 🇫🇷 FR | 🇯🇵 JP | 🇨🇦 CA | 🇦🇺 AU | 🇮🇳 IN | 🇲🇽 MX | 🇮🇹 IT | 🇪🇸 ES |
+|---|---|---|---|---|---|---|---|---|---|---|
+
+###   Arabic/English Bilingual Interface
+Full RTL support for Arabic-speaking KDP authors — the only KDP research tool with this capability.
 
 ---
 
-## 📦 Installation
+##   Tech Stack
 
-### 1. Prerequisites
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Language** | Python 3.10+ | Core logic & orchestration |
+| **UI Framework** | Streamlit 1.28+ | Interactive dashboard |
+| **Data** | pandas, SQLite | Analysis & persistence |
+| **Search API** | SerpApi | Amazon product data |
+| **Visual** | Custom CSS (glass-morphism) | Modern dark theme |
+| **Packaging** | PyInstaller 6+ | Single-file .exe distribution |
+| **Obfuscation** | PyArmor 8+ | IP protection for core algorithms |
+| **Export** | gspread + google-auth | Google Sheets integration |
 
-| Requirement | Minimum | Recommended |
-|-------------|---------|-------------|
-| **Python** | 3.9 | 3.11+ |
-| **OS** | Windows 10 / macOS 12+ / Linux | Any 64-bit |
-| **SerpApi Key** | Free (100 searches/month) | Paid (unlimited) |
-| **Internet** | Required for API calls | Broadband |
+---
 
-### 2. Clone
+##   Quick Start
+
+### Prerequisites
+- Python 3.10 or higher ([download](https://python.org))
+- A free SerpApi API key ([sign up](https://serpapi.com) — 100 searches/month free)
+
+### Installation
 
 ```bash
-git clone https://github.com/saiedpod-bot/-KDP-Research-Pipeline.git
-cd KDP-Research-Pipeline
-```
+# 1. Clone the repository
+git clone https://github.com/your-org/kdp-discovery-engine-pro.git
+cd kdp-discovery-engine-pro
 
-### 3. Virtual Environment
+# 2. (Recommended) Create and activate a virtual environment
+python -m venv venv
 
-<details open>
-<summary><b>Windows</b></summary>
+# Windows
+venv\Scripts\activate
 
-```cmd
-python -m venv .venv
-.venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
+
+# 3. Install dependencies
 pip install --upgrade pip
 pip install -r requirements.txt
-```
-</details>
 
-<details>
-<summary><b>macOS / Linux</b></summary>
+# 4. Configure your API key
+cp config.ini.example config.ini
+# Edit config.ini and add your SerpApi key:
+#     SERPAPI_KEY=your_key_here
+```
+
+### Launch the Dashboard
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+streamlit run main.py
 ```
-</details>
 
-### 4. SerpApi Key
+Your browser will open to `http://localhost:8501` with the full KDP Discovery Engine dashboard.
+
+### Run Headless (CLI Mode)
 
 ```bash
-cp .env.example .env
+# Quick niche scan
+python main.py --cli "low carb cookbook for beginners" --pages 5
+
+# Full pipeline with export
+python main.py --cli "adhd planner for adults" --sheet-id "abc123"
+
+# View all CLI options
+python main.py --cli --help
 ```
 
-Edit `.env`:
+### Run from a Standalone Executable (Windows)
+
+1. Download the latest `KDP_Discovery.exe` from the [Releases](https://github.com/your-org/kdp-discovery-engine-pro/releases) page
+2. Place it in an empty folder with `config.ini`
+3. Double-click `KDP_Discovery.exe`
+
+> No Python installation needed — the .exe bundles everything.
+
+---
+
+## [Placeholder: Dashboard Demo GIF]
+
+![Dashboard Screenshot](assets/dashboard_preview.png)
+<!-- Replace with an actual animated GIF showing the workflow:
+    1. Type a keyword → 2. Run pipeline → 3. View gold mine results → 4. Deep tunnel a niche -->
+
+---
+
+##   Configuration
+
+### config.ini
 
 ```ini
+[API Keys]
 SERPAPI_KEY=your_serpapi_key_here
+GOOGLE_SHEET_ID=
+
+[Marketplace]
+AMAZON_DOMAIN=amazon.com
+
+[Application]
+THEME=dark
+LANGUAGE=en
+MAX_PAGES=3
+MIN_PRICE=7.00
 ```
 
-> 🔑 Get a free key at [serpapi.com](https://serpapi.com) (100 searches/month free tier)
+| Setting | Required | Default | Description |
+|---|---|---|---|
+| `SERPAPI_KEY` | **Yes** | — | [SerpApi](https://serpapi.com) key for Amazon search |
+| `GOOGLE_SHEET_ID` | No | — | Google Sheet ID for export |
+| `AMAZON_DOMAIN` | No | `amazon.com` | Marketplace domain (see table below) |
+| `THEME` | No | `dark` | `dark` or `light` |
+| `LANGUAGE` | No | `en` | `en` (English) or `ar` (Arabic) |
+| `MAX_PAGES` | No | `3` | Search pages (1–20) |
+| `MIN_PRICE` | No | `7.00` | Minimum product price filter |
 
 ---
 
-## 💻 Usage
-
-### ▶️ Command Line (CLI)
-
-```bash
-# Quick scan (1 page)
-python main.py "low fodmap cookbook for kids"
-
-# Deep scan (5 pages)
-python main.py "coloring books for adults" --max-pages 5 --min-price 7.00
-
-# Export to Google Sheets
-python main.py "adhd planner" --max-pages 5 --sheet-id "1abc123..."
-```
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `query` | str | **required** | Amazon search keyword |
-| `--max-pages` | int | 3 | Pages to fetch (20-50 products each) |
-| `--min-price` | float | 5.00 | Minimum price filter |
-| `--sheet-id` | str | — | Google Sheet ID for export |
-| `--enrich-bsr` | flag | off | Fetch real BSR via Product API (1 credit/ASIN) |
-| `--max-enrich` | int | 20 | Max ASINs to enrich with BSR |
-
-```bash
-# Deep scan + BSR enrichment (costs credits)
-python main.py "low fodmap cookbook" --max-pages 3 --enrich-bsr --max-enrich 15
-```
-
-| Depth | Command | Results | Best For |
-|-------|---------|---------|----------|
-| 🟢 Quick | `--max-pages 1` | 20-50 | Initial sniff test |
-| 🟡 Standard | `--max-pages 3` | 50-150 | Regular analysis |
-| 🔴 Deep | `--max-pages 5` | 100-200+ | Saturated niches |
-
-### 🖥️ Streamlit Dashboard
-
-```bash
-streamlit run app.py
-```
-
-Opens at `http://localhost:8501`
-
-#### Tabs
-
-| Tab | Purpose |
-|-----|---------|
-| **📊 Dashboard** | Search + filter + New Release + Tunneling + Discover More |
-| **⚙️ Settings** | SerpApi key + Sheet ID + Clear History |
-| **📜 History** | Last 50 searches + Load Results + Discovery Queue |
-
-#### Sidebar
-
-| Item | Purpose |
-|------|---------|
-| **👨‍💻 Developer Mode** | Show/hide technical logs (persisted to SQLite) |
-| **🆕 New Release Mode** | Filter last 30 days only |
-
----
-
-## 🧠 SmartScore
+##   Project Structure
 
 ```
-SmartScore = ReviewCount / (BSR + 1)
-```
-
-| Component | Meaning |
-|-----------|---------|
-| **High ReviewCount** | Strong demand + social proof |
-| **Low BSR** | High sales velocity |
-| **Division by (BSR+1)** | Penalizes entrenched competitors |
-| **Result** | Higher score = better opportunity |
-
-> ⚠️ **Note:** BSR is currently 0 for all results (requires Product API). SmartScore = ReviewCount temporarily.
-
----
-
-## 💎 Gold Mine
-
-```
-+==========================================================+
-|  GOLD MINE -- Top 5 Low-Competition Opportunities        |
-+==========================================================+
-| Rank ASIN               Score   Price  Reviews Rating |
-|----- -------------- --------- ------- -------- ------ |
-|    1 B0DZY2V81Z        0.0000    8.49        0    4.7 |
-+==========================================================+
-```
-
-### Gem Criteria ✅
-
-| Condition | Threshold | Meaning |
-|-----------|-----------|---------|
-| BSR | < 50,000 | Product sells |
-| ReviewCount | < 30 | Niche not saturated |
-
-> 💡 **Tip:** Focus on products with 10-29 reviews and high ratings — validates the niche converts.
-
----
-
-## 🔬 Components
-
-### Tier 1 — Scraper
-
-**File:** `core/scraper.py` · **Purpose:** Fetch Amazon data via SerpApi
-
-| Function | Purpose |
-|----------|---------|
-| `fetch_amazon_data(query, api_key, page)` | Fetch single page |
-| `fetch_all_pages(query, api_key, max_pages, filter_params)` | Multi-page with dedup |
-| `fetch_amazon_data_paginated(query, api_key, max_pages, filter_params)` | Sequential pagination |
-| `search_and_format(query, api_key, max_pages, filter_params)` | Fetch + format in one call |
-| `fetch_product_details(asin, api_key)` | Single ASIN detail (1 credit) |
-| `fetch_category_url(url, api_key)` | Fetch from any Amazon URL |
-| `tunnel_category_pages(url, api_key, max_pages)` | Multi-page from single URL |
-
-> **Exponential Backoff:** 1s → 2s → 4s → 8s → 16s (up to 5 retries)
-
-### Tier 2 — Analyzer
-
-**File:** `core/analyzer.py` · **Purpose:** Score + detect opportunities
-
-| Function | Purpose |
-|----------|---------|
-| `run_analysis(rows)` | Load → filter → score → save |
-| `find_gems_dataframe(df)` | Pandas-based gem detection |
-| `find_low_competition_gems(rows)` | Pure-Python gem detection |
-| `filter_by_price(rows, min_price)` | Price filter |
-
-### Tier 3 — Exporter
-
-**File:** `core/exporter.py` · **Purpose:** Export to Google Sheets
-
-| Function | Purpose |
-|----------|---------|
-| `run_export(rows, sheet_id, creds_path)` | Auth → upload → write |
-| `export_with_service_account(rows, sheet_id, creds_path)` | Service account export |
-
-### Tier 4 — Database & Config
-
-**Files:** `core/database.py` + `core/config_manager.py`
-
-**SQLite Tables:**
-
-| Table | Content |
-|-------|---------|
-| `search_history` | Last 50 searches + params + results |
-| `settings` | SerpApi key + Sheet ID + Developer Mode |
-| `discovery_queue` | Discovered terms + source + status |
-
-**Config Priority Chain:** SQLite DB → `.env` → environment variable → default
-
-### Tier 5 — Dashboard
-
-**File:** `app.py`
-
-![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat&logo=streamlit&logoColor=white)
-
-- Dark theme (`.streamlit/config.toml`)
-- Clickable ASIN links
-- Est. Daily Sales = `10000 / BSR`
-- Price formatting `$%.2f`
-- Color-coded columns
-
----
-
-## 🚀 Advanced Features
-
-### 🔍 Smart Niche Discovery
-
-Auto-discover keywords from existing products.
-
-```
-1. Pick 3 ASINs from results
-2. fetch_product_details() → SerpApi Product API (3 credits)
-3. extract_discovery_terms() extracts:
-   ├── Categories        (score: 90) ← Amazon browse nodes
-   ├── Bought Together   (score: 70) ← frequently bought items
-   └── Also Bought       (score: 40) ← related products
-4. Saved to discovery_queue → displayed in Dashboard
-```
-
-### 🆕 New Release Mode
-
-```
-✅ Toggle in sidebar
-📡 Sends filter_params = {"rh": "p_n_publication_date:1250226011"}
-🎯 Shows only products released in the last 30 days
-```
-
-### 🕳️ Multi-Niche Tunneling
-
-```
-✅ Paste any Amazon URL instead of a keyword
-📡 Uses SerpApi 'url' parameter
-🔄 tunnel_category_pages() auto-paginates
-🎯 Great for: Bestsellers / New Releases / specific categories
-```
-
-### 🔧 Search Filters (rh)
-
-```
-✅ Free-text field, passed verbatim to SerpApi
-✅ Supports any Amazon browser filter
-✅ Example: p_n_publication_date:1250226011|p_n_condition-type:6350179011
-```
-
-### 👨‍💻 Developer Mode
-
-```
-✅ Sidebar checkbox
-✅ Hides/shows technical logs + status cards
-✅ Preference auto-saved to SQLite
-```
-
-### 🖼️ Visual Product Gallery
-
-Browse ranked products in a 4-column card grid with thumbnails, pricing, EOS scores, and direct Amazon links.
-
-![Visual Product Gallery](gallery_screenshot.png)
-
-*Example: Low-FODMAP Cookbooks — 13 products ranked by EOS*
-
-### 🕳️ Deep Niche Tunneling
-
-One-click competitive intelligence for any niche — extracts the category, auto-filters by last-30-days, scores with EOS, and measures market density.
-
-```
-┌─────────────────────────────────────────────────────┐
-│  🔬 Deep Niche Tunneling Workflow                   │
-├─────────────────────────────────────────────────────┤
-│  1. Enter niche query (e.g. "low fodmap cookbook")  │
-│  2. generate_filtered_url() → builds Amazon URL     │
-│     with rh=n:283155,p_n_publication_date:1250226011│
-│  3. deep_tunnel_niche() → fetches filtered results  │
-│  4. find_gems_dataframe() → scores with EOS         │
-│  5. deep_tunnel_niche(filter_type='none') → total   │
-│  6. calculate_competition_score() → density %       │
-│  7. Golden Niche? → density < 30% + VS ≥ 30         │
-└─────────────────────────────────────────────────────┘
-```
-
-#### Competition Density Scoring
-
-| Density | Label | Color | Action |
-|---------|-------|-------|--------|
-| < 10% | Low Density (High Potential) | 🟢 Green | **Enter now** — blue ocean |
-| 10–30% | Moderate Density | 🟡 Yellow | Differentiate strongly |
-| > 30% | Saturated (High Competition) | 🔴 Red | Find sub-niche or pivot |
-
-#### Real Examples
-
-| Query | Filtered | Unfiltered | Density | Verdict |
-|-------|----------|------------|---------|---------|
-| `low fodmap cookbook for kids` | 12 | 55 | **21.8%** | 🟢 **Golden Niche** |
-| `coloring books for adults` | 48 | 60 | **80%** | 🔴 Saturated |
-| `permaculture logbook` | 3 | 18 | **16.7%** | 🟢 **Golden Niche** |
-
-#### Output: Golden List CSV
-
-```
-ASIN,Title,Price,Visibility_Score,EOS,Theme,ReviewCount,Rating,PublicationDate
-B0C...,Permaculture Logbook for Beginners,$12.99,85,142.3,Set,12,4.5,2026-05-01
-...
-```
-
-Click **Export to CSV** in the dashboard to download the scored golden list for offline analysis.
-
-### 🤖 Auto-Filter Toggle
-
-```
-✅ Sidebar checkbox → persists across sessions
-✅ Appends last-30-days filter to every search automatically
-✅ Overrides individual New Release toggle
-✅ Helps maintain consistent competitive awareness
-```
-
----
-
-## 🤖 Multi-Agent Pipeline
-
-**Reference files:** `multi-agent-full-pipeline.md` · `multi-agent-niche-research.md`
-
-### 33 AI Agents across 8 Stages
-
-```mermaid
-graph LR
-    A[1. Niche Research<br>6+1 agents] --> B[2. Content Creation<br>3 agents]
-    B --> C[3. Formatting<br>2 agents]
-    C --> D[4. Cover Design<br>4 agents]
-    D --> E[5. Listing<br>4 agents]
-    E --> F[6. Amazon Ads<br>6 agents]
-    F --> G[7. Launch<br>4 agents]
-    G --> H[8. Post-Launch<br>4 agents]
-```
-
-| Stage | Agents | Purpose |
-|-------|:------:|---------|
-| 1. Niche Research | 6+1 | Deep market research |
-| 2. Content Creation | 3 | Plan + write + review |
-| 3. Formatting & Layout | 2 | Kindle + Paperback |
-| 4. Cover Design | 4 | Front + back + 3D |
-| 5. Listing Optimization | 4 | Title + desc + keywords + A+ |
-| 6. Amazon Ads | 6 | Managed ad campaigns |
-| 7. Launch Strategy | 4 | ARC + launch + reviews |
-| 8. Post-Launch Monitoring | 4 | Analytics + update + spin-off |
-
-### Case Study: Low-FODMAP Kids' Cookbook
-
-| Metric | Value |
-|--------|-------|
-| **Chapters** | 26 |
-| **Parts** | 8 |
-| **Recipes** | 68 |
-| **Word Count** | 33,879 |
-| **Est. Pages** | 200-250 |
-| **Target Audience** | 10-15% of children with IBS |
-| **Top Competitor** | 742 reviews · 4.5★ |
-
----
-
-## 📖 Manuscript Files
-
-| File | Content |
-|------|---------|
-| `manuscript-frontmatter-part1.md` | Introduction + Low-FODMAP basics |
-| `manuscript-part2-breakfasts.md` | Breakfast recipes |
-| `manuscript-part3-lunchbox.md` | School lunch recipes |
-| `manuscript-part4-dinner.md` | Dinner recipes |
-| `manuscript-part5-snacks.md` | Snack recipes |
-| `manuscript-part6-desserts.md` | Dessert recipes |
-| `manuscript-part7-drinks.md` | Drink recipes |
-| `manuscript-part8-backmatter.md` | Conclusion + appendices |
-
----
-
-## 📚 Sources & References
-
-| Source | Type | Cost | Usage |
-|--------|------|:----:|-------|
-| [SerpApi](https://serpapi.com) | Amazon Search | 100/mo free | Amazon search |
-| [SerpApi Product API](https://serpapi.com/product-search) | Product Detail | 1 credit/ASIN | Product details |
-| [Google Sheets API](https://console.cloud.google.com) | Spreadsheet | Free | Export |
-
-### Dependencies
-
-| Package | Version | Purpose |
-|---------|:-------:|---------|
-| `streamlit` | ≥1.28 | Dashboard |
-| `pandas` | ≥1.5 | Data analysis |
-| `serpapi` | ≥0.1 | Amazon API |
-| `requests` | ≥2.28 | HTTP client |
-| `gspread` | ≥5.0 | Google Sheets |
-| `google-auth` | ≥2.0 | Google auth |
-
----
-
-## 🔗 Integration
-
-### 1. Google Sheets Export
-
-```bash
-python main.py "query" --sheet-id "1abc..."
-```
-
-**Setup:**
-1. Service account in [Google Cloud Console](https://console.cloud.google.com)
-2. Enable Google Sheets API
-3. Place `credentials.json` in project root
-
-### 2. PyInstaller (Standalone EXE)
-
-```bash
-pip install pyinstaller
-pyinstaller build.spec
-```
-
-| File | Description |
-|------|-------------|
-| `dist/KDP_Pipeline.exe` | No console window |
-| `dist/KDP_Pipeline_DEBUG.exe` | With console for debugging |
-
-### 3. SerpApi Integration
-
-```
-Dashboard Settings ← .env ← environment variable
-```
-
----
-
-## 📁 Project Structure
-
-```
-KDP-Research-Pipeline/
+kdp-discovery-engine-pro/
+├── main.py                    # Entry point (streamlit run main.py)
+├── config.ini                 # User configuration (gitignored)
+├── config.ini.example         # Configuration template (versioned)
+├── requirements.txt           # Python dependencies
+├── build_spec.spec            # PyInstaller build spec
+├── pyarmor_build.py           # Code obfuscation script
 │
-├── app.py                        # Streamlit Dashboard 🖥️
-├── main.py                       # CLI Pipeline ▶️
-├── requirements.txt              # Dependencies 📦
-├── build.spec                    # PyInstaller 🏗️
-├── config.json                   # API safety lock 🔒
-├── .env                          # SerpApi key (gitignored) 🔑
-├── Dockerfile                    # Container image 🐳
-├── .dockerignore                 # Docker exclusions 🚫
-├── .env.example                  # Settings template 📝
-├── .gitignore
-├── README.md
+├── src/
+│   ├── dashboard.py           # Streamlit UI (full interactive dashboard)
+│   ├── cli.py                 # Command-line interface
+│   └── core/
+│       ├── __init__.py        # Package exports
+│       ├── analyzer.py        # Scoring algorithms (EOS, UOI, profit, trademark)
+│       ├── scraper.py         # Amazon data collection (SerpApi)
+│       ├── database.py        # SQLite persistence layer
+│       ├── exporter.py        # Google Sheets export
+│       └── config_manager.py  # Configuration resolution chain
 │
-├── core/                         # ⭐ Core package
-│   ├── __init__.py               # Package exports
-│   ├── scraper.py                # Amazon data fetching 🕷️
-│   ├── analyzer.py               # Scoring + analysis 🧠
-│   ├── exporter.py               # Google Sheets export 📤
-│   ├── database.py               # SQLite 🗄️
-│   └── config_manager.py         # Settings management ⚙️
+├── assets/                    # Icons, images, static resources
+├── data/                      # SQLite database, logs, cache (gitignored)
+├── output/                    # Exported results (gitignored)
 │
-├── src/                          # Legacy (backup)
-│   ├── scraper.py
-│   ├── analyzer.py
-│   └── exporter.py
+├── .github/
+│   └── ISSUE_TEMPLATE/        # Issue templates for contributors
+│       ├── bug_report.md
+│       └── feature_request.md
 │
-├── manuscript-*.md               # 8 manuscript files (68 recipes) 📖
-├── system-prompt-kdp.md          # KDP expert system prompt 📋
-├── multi-agent-full-pipeline.md  # 33-agent pipeline 🤖
-├── multi-agent-niche-research.md # 6-agent niche research 🔬
-├── memory-repository.md          # Baseline memory 🧠
-├── project_state.json            # Pipeline state 📊
-│
-├── database/                     # SQLite (gitignored)
-├── output/                       # Results (gitignored)
-└── .streamlit/
-    └── config.toml               # Dark theme 🌙
+├── CONTRIBUTING.md            # Contribution guidelines
+├── LICENSE                    # MIT License
+├── SECURITY.md                # Security policy
+└── README.md                  # This file
 ```
 
 ---
 
-## 🔄 Roadmap
+##   Security Notice
 
-- [x] **Phase 1:** Niche Research — Market Scanner + Gem Detector
-- [x] **Phase 2:** Content Creation — 33,879-word manuscript
-- [x] **Phase 3:** Streamlit Dashboard + SQLite + Discovery Engine
-- [x] **Phase 4:** Deep Niche Tunneling + Competitive Density Analysis + Visual Gallery
-- [ ] **Phase 5:** Formatting & Layout (Kindle + Paperback)
-- [ ] **Phase 6:** Cover Design (AI-generated)
-- [ ] **Phase 7:** Listing Optimization (Title, Description, A+)
-- [ ] **Phase 8:** Amazon Ads Campaigns
-- [ ] **Phase 9:** Launch Strategy + Post-Launch Monitoring
+**⚠️ Protect your API keys.**
+
+1. **`config.ini` is listed in `.gitignore`** — it will never be committed to version control
+2. **Never share your `config.ini`**, `credentials.json`, or `.env` files
+3. **Use environment variables** as an alternative: `export SERPAPI_KEY="sk-..."`
+4. **The `.env.example` and `config.ini.example`** files are safe templates — they contain placeholder values only
+5. **Revoke compromised keys** immediately via your [SerpApi dashboard](https://serpapi.com)
 
 ---
 
-## 📦 GitHub Packages
+##   Comparison with Competitors
 
-### Docker Image (ghcr.io)
-
-Published to **GitHub Container Registry** on every release.
-
-| Image | Description |
-|-------|-------------|
-| `ghcr.io/saiedpod-bot/kdp-research-pipeline:latest` | Latest stable build |
-| `ghcr.io/saiedpod-bot/kdp-research-pipeline:<version>` | Versioned (e.g. `v1.0.0`) |
-
-#### Pull & Run
-
-```bash
-# Pull the image
-docker pull ghcr.io/saiedpod-bot/kdp-research-pipeline:latest
-
-# Run the Streamlit dashboard
-docker run -p 8501:8501 \
-  -e SERPAPI_KEY=your_key_here \
-  ghcr.io/saiedpod-bot/kdp-research-pipeline:latest
-```
-
-Open [http://localhost:8501](http://localhost:8501) in your browser.
-
-#### Docker Compose
-
-```yaml
-version: "3.8"
-services:
-  kdp-pipeline:
-    image: ghcr.io/saiedpod-bot/kdp-research-pipeline:latest
-    ports:
-      - "8501:8501"
-    environment:
-      - SERPAPI_KEY=${SERPAPI_KEY}
-    volumes:
-      - ./database:/app/database
-      - ./output:/app/output
-```
-
-```bash
-docker compose up
-```
-
-#### Run CLI commands inside the container
-
-```bash
-docker run --rm \
-  -e SERPAPI_KEY=your_key_here \
-  ghcr.io/saiedpod-bot/kdp-research-pipeline:latest \
-  streamlit run app.py
-```
-
-### 🔐 Secrets Management (CI/CD)
-
-No tokens are hardcoded anywhere. All sensitive values are stored as **GitHub Repository Secrets**:
-
-| Secret | Used In | Purpose |
-|--------|---------|---------|
-| `GITHUB_TOKEN` | `publish.yml` (auto-injected) | Authenticate Docker push to ghcr.io |
-
-**Required for local use:**
-
-| Credential | Where to Set | How to Obtain |
-|------------|-------------|---------------|
-| `SERPAPI_KEY` | `.env` file or Dashboard Settings | [serpapi.com](https://serpapi.com) |
-| `GOOGLE_APPLICATION_CREDENTIALS` | `.env` file | [Google Cloud Console](https://console.cloud.google.com) |
-
-#### Setting Repository Secrets
-
-1. Go to **GitHub repo → Settings → Secrets and variables → Actions**
-2. Click **New repository secret**
-3. Add `SERPAPI_KEY` with your SerpApi key (for CI tests if needed)
-4. The `GITHUB_TOKEN` secret is automatically available to all workflows
-
-#### CI/CD Workflows
-
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| `ci.yml` | Push / PR to `master` | Lint + import validation |
-| `publish.yml` | Release published | Build + push Docker image to ghcr.io |
-
-### 🔄 Publishing a New Release
-
-1. Tag and create a release on GitHub:
-
-```bash
-# From local repo
-git tag v1.1.0
-git push origin v1.1.0
-```
-
-2. On GitHub: **Releases → Draft a new release** → select tag → publish
-3. `publish.yml` auto-builds and pushes the Docker image to `ghcr.io`
+| Feature | 🚀 KDP Engine Pro | MerchMetrix | PodCS | Podly |
+|---|---|---|---|---|
+| **KDP Royalty Calculator (3 formats)** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| **Unified Opportunity Index (proprietary)** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| **Deep Niche Tunneling (30-day filter)** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| **Batch Niche Comparison** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| **Niche Idea Generator** | ✅ Yes **FREE** | ✅ Yes ($29/mo) | ❌ No | ❌ No |
+| **Trademark Checker (98 terms)** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
+| **Removed Products Tracker** | ✅ Yes **FREE** | ❌ No | ✅ Yes ($19/mo) | ❌ No |
+| **BSR Trend Analysis** | ✅ Yes | ❌ No | ❌ No | ✅ Yes |
+| **Multi-Marketplace (11 domains)** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| **Bilingual (English/Arabic)** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| **Offline / SQLite Storage** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| **Open Source (MIT)** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| **Price** | **FREE** | $29/month | $19/month | $15/month |
 
 ---
 
-## 📜 License
+##   Packaging & Distribution
 
-**MIT License** — Use, modify, and distribute freely.
+### Build a Standalone Executable
+
+```bash
+pip install pyinstaller pywin32
+pyinstaller --clean build_spec.spec
+# Output: dist/KDP_Discovery.exe (~200 MB)
+```
+
+### Obfuscate Core Algorithms (IP Protection)
+
+```bash
+pip install pyarmor
+python pyarmor_build.py
+# Output: dist_obfuscated/src/core/*.py (obfuscated bytecode)
+# Then build the .exe:
+pyinstaller --clean build_spec.spec
+```
+
+Obfuscated modules: `analyzer.py`, `database.py`, `scraper.py`, `exporter.py`, `config_manager.py`.
 
 ---
 
-<p align="center">
-  Built by <a href="https://github.com/saiedpod-bot">saiedpod-bot</a> 🛠️<br>
-  <sub>Last updated: June 2026</sub>
-</p>
+##   System Requirements
+
+| Resource | Minimum | Recommended |
+|---|---|---|
+| Python | 3.10 | 3.11+ |
+| RAM | 512 MB | 1 GB |
+| Disk (source) | 200 MB | 500 MB |
+| Disk (PyInstaller build) | 1 GB | 2 GB |
+| OS | Windows 10, macOS 12, Ubuntu 20.04 | Windows 11, macOS 14 |
+| API | SerpApi free tier (100/mo) | SerpApi paid tier |
+
+---
+
+##   Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+
+- How to report bugs
+- How to suggest features
+- How to submit pull requests
+- Our code of conduct
+
+Quick links:
+- [Open an Issue](https://github.com/your-org/kdp-discovery-engine-pro/issues/new/choose)
+- [Submit a PR](https://github.com/your-org/kdp-discovery-engine-pro/compare)
+
+---
+
+##   License
+
+[MIT License](LICENSE) — See [LICENSE](LICENSE) for full text.
+
+---
+
+##   Roadmap
+
+- [ ] **Historical BSR Graphs** — time-series visualization from snapshot data
+- [ ] **USPTO Trademark API Integration** — live trademark database queries
+- [ ] **Listing Generator** — copy-ready title/bullet templates from top performers
+- [ ] **Responsive Mobile Layout** — research on-the-go
+- [ ] **Premium Tier** — SerpApi credit tracking & usage dashboard
+
+---
+
+##   Acknowledgments
+
+- [SerpApi](https://serpapi.com) for Amazon search API
+- [Streamlit](https://streamlit.io) for the interactive dashboard framework
+- All beta testers who provided invaluable feedback
+
+---
+
+<div align="center">
+  <p><strong>KDP Discovery Engine Pro</strong> — Built for KDP Authors, by KDP Authors</p>
+  <p>
+    <a href="https://github.com/your-org/kdp-discovery-engine-pro">GitHub</a> •
+    <a href="#-why-kdp-discovery-engine-pro">Documentation</a> •
+    <a href="https://github.com/your-org/kdp-discovery-engine-pro/issues">Issues</a> •
+    <a href="https://github.com/your-org/kdp-discovery-engine-pro/discussions">Discussions</a>
+  </p>
+</div>

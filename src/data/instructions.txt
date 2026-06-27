@@ -1,0 +1,17 @@
+--- دليل العمل السريع مع Canva Bulk Create ---
+1. افتح Canva وأنشئ تصميماً بمقاس 8.5x11 إنش.
+2. أضف 'Frame' (إطار صورة) إلى صفحتك.
+3. من القائمة الجانبية اختر 'Apps' ثم 'Bulk Create'.
+4. اضغط 'Upload CSV' واختر الملف المرفق.
+5. اضغط بزر الفأرة الأيمن على الإطار واضغط 'Connect Data'.
+6. اضغط 'Continue' ثم 'Generate'.
+ستقوم Canva بتوزيع الصور على كامل الكتاب تلقائياً!
+
+English Quick Reference:
+1. Open Canva and create a design at 8.5x11 inches.
+2. Add a Frame to your page.
+3. From the side menu choose Apps > Bulk Create.
+4. Click 'Upload CSV' and select the CSV file included with these instructions.
+5. Right-click the frame and choose 'Connect Data'.
+6. Click 'Continue' then 'Generate'.
+Canva will automatically distribute the images across the entire book!

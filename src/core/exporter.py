@@ -43,14 +43,15 @@ except ImportError:
     HAS_GSHEETS = False
 
 # ---------------------------------------------------------------------------
-# Logging setup
+# Logging setup — write logs to data/ directory
 # ---------------------------------------------------------------------------
+_PROJECT_ROOT_EX = Path(__file__).resolve().parent.parent.parent
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler(Path(__file__).parent / "exporter.log", mode="a"),
+        logging.FileHandler(_PROJECT_ROOT_EX / "data" / "exporter.log", mode="a"),
     ],
 )
 logger = logging.getLogger("kdpexporter")
@@ -323,6 +324,94 @@ def upload_to_sheet(
     except Exception as exc:
         logger.error("Failed to upload to Google Sheets: %s", exc)
         return False
+
+
+# ---------------------------------------------------------------------------
+# Canva Bulk Create — CSV + Instruction File Generator
+# ---------------------------------------------------------------------------
+_DATA_DIR: Path = PROJECT_ROOT / "data"
+_CSV_FILE: str = "canva_bulk_import.csv"
+_INSTRUCTION_FILE: str = "instructions.txt"
+
+
+def _ensure_data_dir() -> None:
+    _DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def generate_canva_instruction_file() -> str:
+    """Generate a quick-start instruction file for the user.
+
+    The file explains how to use the Bulk Create CSV inside Canva
+    step-by-step.  Saved to ``data/instructions.txt``.
+
+    Returns
+    -------
+    str
+        Path to the generated instruction file.
+    """
+    _ensure_data_dir()
+    content = """--- دليل العمل السريع مع Canva Bulk Create ---
+1. افتح Canva وأنشئ تصميماً بمقاس 8.5x11 إنش.
+2. أضف 'Frame' (إطار صورة) إلى صفحتك.
+3. من القائمة الجانبية اختر 'Apps' ثم 'Bulk Create'.
+4. اضغط 'Upload CSV' واختر الملف المرفق.
+5. اضغط بزر الفأرة الأيمن على الإطار واضغط 'Connect Data'.
+6. اضغط 'Continue' ثم 'Generate'.
+ستقوم Canva بتوزيع الصور على كامل الكتاب تلقائياً!
+
+English Quick Reference:
+1. Open Canva and create a design at 8.5x11 inches.
+2. Add a Frame to your page.
+3. From the side menu choose Apps > Bulk Create.
+4. Click 'Upload CSV' and select the CSV file included with these instructions.
+5. Right-click the frame and choose 'Connect Data'.
+6. Click 'Continue' then 'Generate'.
+Canva will automatically distribute the images across the entire book!
+"""
+    inst_path: Path = _DATA_DIR / _INSTRUCTION_FILE
+    inst_path.write_text(content, encoding="utf-8")
+    logger.info("Canva instruction file saved to %s", inst_path)
+    return str(inst_path)
+
+
+def generate_canva_bulk_csv(image_urls: List[str]) -> Optional[str]:
+    """Generate a single-column CSV for Canva's Bulk Create feature.
+
+    Saves to ``data/canva_bulk_import.csv`` and returns the file path.
+    Also generates an instruction file (``data/instructions.txt``) alongside it.
+
+    Format:
+        Image
+        https://example.com/image1.jpg
+        https://example.com/image2.jpg
+        ...
+
+    Parameters
+    ----------
+    image_urls : List[str]
+        List of publicly accessible image URLs.
+
+    Returns
+    -------
+    Optional[str]
+        Path to the generated CSV file, or None if input is empty.
+    """
+    if not image_urls:
+        return None
+
+    import pandas as _pd
+
+    _ensure_data_dir()
+    df = _pd.DataFrame(image_urls, columns=["Image"])
+
+    csv_path: Path = _DATA_DIR / _CSV_FILE
+    df.to_csv(csv_path, index=False)
+
+    # Generate instruction file alongside the CSV
+    generate_canva_instruction_file()
+
+    logger.info("Canva Bulk CSV saved to %s (%d URLs)", csv_path, len(image_urls))
+    return str(csv_path)
 
 
 # ---------------------------------------------------------------------------

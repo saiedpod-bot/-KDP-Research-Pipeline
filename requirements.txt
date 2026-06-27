@@ -1,6 +1,40 @@
-streamlit>=1.28
-pandas>=1.5
-serpapi>=0.1
-requests>=2.28
-gspread>=5.0
-google-auth>=2.0
+# ============================================================================
+# KDP Discovery Engine Pro — Python Dependencies
+# ============================================================================
+# Install: pip install -r requirements.txt
+#
+# For development, also install: pip install pytest pycodestyle mypy
+# ============================================================================
+
+# ---------------------------------------------------------------------------
+# Core — required for all functionality
+# ---------------------------------------------------------------------------
+streamlit>=1.28,<2.0         # Interactive dashboard framework
+pandas>=1.5,<3.0             # Data manipulation and analysis
+serpapi>=0.1,<1.0            # Amazon search via SerpApi
+requests>=2.28,<3.0          # HTTP client (used by serpapi)
+
+# ---------------------------------------------------------------------------
+# Optional — Google Sheets export
+# ---------------------------------------------------------------------------
+gspread>=5.0,<7.0            # Google Sheets API client
+google-auth>=2.0,<3.0        # OAuth2 authentication
+
+# ---------------------------------------------------------------------------
+# Optional — Windows packaging (single-file .exe)
+# ---------------------------------------------------------------------------
+pyinstaller>=6.0,<7.0        # Bundles Python app into standalone executable
+pywin32>=306                 # Windows API bindings (required by PyInstaller)
+
+# ---------------------------------------------------------------------------
+# Optional — Code obfuscation (IP protection for core algorithms)
+# ---------------------------------------------------------------------------
+pyarmor>=8.0,<9.0            # Obfuscates Python bytecode
+
+# ---------------------------------------------------------------------------
+# Optional — Development tools
+# ---------------------------------------------------------------------------
+# pytest>=7.0                 # Testing framework
+# pycodestyle>=2.10           # PEP 8 style checker
+# mypy>=1.0                   # Static type checking
+# black>=23.0                 # Code formatter

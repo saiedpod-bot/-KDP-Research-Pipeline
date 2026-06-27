@@ -10,5 +10,6 @@ from . import analyzer
 from . import exporter
 from . import database
 from . import config_manager
+from . import design_engine
 
-__all__ = ["scraper", "analyzer", "exporter", "database", "config_manager"]
+__all__ = ["scraper", "analyzer", "exporter", "database", "config_manager", "design_engine"]
