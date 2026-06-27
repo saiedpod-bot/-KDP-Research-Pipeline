@@ -729,16 +729,30 @@ def _display_results(results: Optional[Dict[str, Any]], query: str, sheet_id: st
 # ---------------------------------------------------------------------------
 # Gallery display helper
 # ---------------------------------------------------------------------------
-def _display_gallery(results: Optional[Dict[str, Any]]) -> None:
-    """Render pipeline results as a visual card gallery with thumbnails."""
-    if not results or results.get("error") or not results.get("ranked_rows"):
+def _display_gallery(
+    results: Optional[Dict[str, Any]],
+    tunnel_results: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Render pipeline results as a visual card gallery with thumbnails.
+
+    Falls back to tunnel results if pipeline results are not available.
+    """
+    rows: List[Dict[str, Any]] = []
+
+    if results and not results.get("error") and results.get("ranked_rows"):
+        rows = results["ranked_rows"]
+    elif tunnel_results and not tunnel_results.get("error") and tunnel_results.get("filtered_rows"):
+        rows = tunnel_results["filtered_rows"]
+
+    if not rows:
         if results and results.get("error"):
             st.error(f"Pipeline halted: {results['error']}")
+        elif tunnel_results and tunnel_results.get("error"):
+            st.error(f"Deep tunnel failed: {tunnel_results['error']}")
         else:
-            st.info("Run a pipeline from the **Data Table** tab first to see products here.")
+            st.info("Run a pipeline or deep tunnel from the **Data Table** tab first to see products here.")
         return
 
-    rows = results["ranked_rows"]
     st.markdown(f"### :art: Product Gallery — {len(rows)} products")
 
     cols = st.columns(4)
@@ -1206,7 +1220,7 @@ with tab_gallery:
         "Browse products in a visual card layout with thumbnails</div>",
         unsafe_allow_html=True,
     )
-    _display_gallery(st.session_state.get("pipeline_results"))
+    _display_gallery(st.session_state.get("pipeline_results"), st.session_state.get("tunnel_results"))
 
 
 # =========================================================================
