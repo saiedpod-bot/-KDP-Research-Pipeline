@@ -949,6 +949,47 @@ with st.sidebar:
             "then click **Analyze Niche** below."
         )
 
+    # -- Quick Discover: zero-credit keyword suggestions ----------------------
+    with st.expander(":bulb: Quick Discover (free — no credits used)", expanded=False):
+        st.markdown(
+            "<div style='font-size:0.82rem;color:#888;margin-bottom:6px;'>"
+            "Enter a broad term and we'll find specific niche ideas using Google Suggest "
+            "(no Pangolinfo credits consumed). Click **Select** to mark one for analysis.</div>",
+            unsafe_allow_html=True,
+        )
+        discover_query = st.text_input(
+            "Broad term",
+            value=query,
+            placeholder="e.g. coloring book",
+            label_visibility="collapsed",
+            key="discover_input",
+        )
+        if st.button("Discover Niche Ideas", type="secondary", use_container_width=True):
+            with st.spinner("Fetching free suggestions..."):
+                suggestions = pre_research.get_niche_suggestions(discover_query, max_results=15)
+                st.session_state["quick_discover_suggestions"] = suggestions
+            if not suggestions:
+                st.info("No suggestions found. Try a different broad term.")
+
+        if st.session_state["quick_discover_suggestions"]:
+            st.markdown("**Suggestions**")
+            for i, sug in enumerate(st.session_state["quick_discover_suggestions"]):
+                kw = sug["keyword"]
+                is_validated = kw in st.session_state["validated_keywords"]
+                btn_label = "✅ Selected" if is_validated else "Select"
+                cols = st.columns([3, 1])
+                with cols[0]:
+                    st.markdown(f"{i+1}. {kw}  ")
+                with cols[1]:
+                    if st.button(btn_label, key=f"ds_select_{i}", use_container_width=True):
+                        if is_validated:
+                            st.session_state["validated_keywords"].discard(kw)
+                        else:
+                            st.session_state["validated_keywords"].add(kw)
+                            # Also fill the main query
+                            st.session_state["search_override"] = kw
+                        st.rerun()
+
     # -- Market domain selector (multi-marketplace support) --------------------
     domain_options = {
         "amazon.com": "🇺🇸 US",
@@ -1147,6 +1188,10 @@ if "tunnel_running" not in st.session_state:
     st.session_state["tunnel_running"] = False
 if "tunnel_density" not in st.session_state:
     st.session_state["tunnel_density"] = None
+if "validated_keywords" not in st.session_state:
+    st.session_state["validated_keywords"] = set()
+if "quick_discover_suggestions" not in st.session_state:
+    st.session_state["quick_discover_suggestions"] = []
 if "kw_suggestions" not in st.session_state:
     st.session_state["kw_suggestions"] = []
 if "kw_gaps" not in st.session_state:
@@ -1564,6 +1609,7 @@ with tab_dash:
 
     # -- Action row ------------------------------------------------------------
     action_cols = st.columns([2, 1, 1])
+    keyword_validated = query in st.session_state["validated_keywords"]
     run_disabled = st.session_state["pipeline_running"] or not MODULES_OK
 
     with action_cols[0]:
@@ -1573,6 +1619,23 @@ with tab_dash:
             disabled=run_disabled,
             use_container_width=True,
         )
+
+    # Validation gate: show warning if keyword not pre-validated
+    if query and not keyword_validated and not use_sample_data:
+        st.warning(
+            ":shield: **Keyword not validated.** Use **Quick Discover** above to pre-validate "
+            "this keyword (free) or check **Force Analysis** below.",
+            icon="⚠️",
+        )
+    if not use_sample_data:
+        force_analysis = st.checkbox(
+            "Force Analysis (skip validation — consumes credit)",
+            value=False,
+            key="force_analysis",
+            help="Check this to run analysis on any keyword without pre-validation.",
+        )
+    else:
+        force_analysis = True
 
     with action_cols[1]:
         if st.button("Clear Log", use_container_width=True):
@@ -1605,6 +1668,26 @@ with tab_dash:
 
         api_key = config_manager.get_serpapi_key()
         sheet_id_val = config_manager.get_sheet_id() or sheet_id
+
+        # Validation gate: block unless keyword is validated or user forces it
+        if not use_sample_data and not keyword_validated and not force_analysis:
+            stash_log(f"VALIDATION BLOCKED: '{query}' not pre-validated. Use Quick Discover or Force Analysis.")
+            results = {
+                "scraped_count": 0,
+                "opportunity_count": 0,
+                "gem_count": 0,
+                "ranked_rows": [],
+                "gems": [],
+                "export_ok": False,
+                "error": (
+                    ":shield: **Keyword not validated.** "
+                    "Use **Quick Discover** in the sidebar to pre-validate this keyword for free, "
+                    "or check **Force Analysis** to skip validation and consume a Pangolinfo credit."
+                ),
+            }
+            st.session_state["pipeline_results"] = results
+            st.session_state["pipeline_running"] = False
+            st.rerun()
 
         setup_log_capture()
 
@@ -3261,6 +3344,26 @@ with tab_settings:
             st.rerun()
         else:
             st.warning("Please enter a valid Sheet ID.")
+
+    st.markdown("---")
+    st.markdown("### Data Provider Rotation")
+
+    providers_list = providers.list_providers()
+    current_provider = os.environ.get("PROVIDER_ACTIVE", "pangolinfo")
+    provider_options = {p["slug"]: f"{p['name']} {'✅' if p['configured'] else '⚠️ Not configured'}" for p in providers_list}
+    selected = st.selectbox(
+        "Active Provider",
+        options=list(provider_options.keys()),
+        format_func=lambda s: provider_options.get(s, s),
+        index=list(provider_options.keys()).index(current_provider)
+            if current_provider in provider_options else 0,
+        help="Switch between data providers. Change PROVIDER_ACTIVE in config.ini to persist.",
+    )
+    if selected != current_provider:
+        if st.button("Switch to " + selected, use_container_width=True):
+            os.environ["PROVIDER_ACTIVE"] = selected
+            st.success(f"Switched to {selected}. Restart to persist in config.ini.")
+            st.rerun()
 
     st.markdown("---")
     st.markdown("### Data Management")

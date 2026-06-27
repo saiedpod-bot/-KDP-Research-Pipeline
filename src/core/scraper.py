@@ -977,7 +977,7 @@ def extract_discovery_terms(
 
 
 # ---------------------------------------------------------------------------
-# Pangolinfo Amazon Scrape API — search by keyword
+# Provider-agnostic search — delegates to the active provider
 # ---------------------------------------------------------------------------
 def fetch_category_url(
     keyword: str,
@@ -985,160 +985,57 @@ def fetch_category_url(
     max_retries: int = 3,
 ) -> Optional[Dict[str, Any]]:
     """
-    Scrape Amazon search results via Pangolinfo Amazon Scrape API.
+    Scrape Amazon search results using the currently active data provider.
 
-    Uses the ``amzKeyword`` parser to return structured product data
-    (ASIN, Title, Price, Star, Rating, Sales) for a given keyword.
+    The active provider is determined by ``PROVIDER_ACTIVE`` in config.ini
+    (default: ``"pangolinfo"``). This function delegates to the provider's
+    ``.scrape()`` method, so swapping the provider requires zero code changes.
 
     Parameters
     ----------
     keyword : str
-        Amazon search keyword (e.g. "yoga anatomy coloring book").
+        Amazon search keyword.
     marketplace : str
-        Amazon marketplace code (default: "amz_us").
-        Supported: amz_us, amz_uk, amz_de, amz_fr, amz_it, amz_es,
-                   amz_jp, amz_ca, amz_in, amz_com_au, amz_mx.
+        Marketplace slug (provider-specific; Pangolinfo uses ``amz_us`` etc.).
     max_retries : int
-        Number of retry attempts on network/server errors.
+        Passed through to the provider.
 
     Returns
     -------
     dict or None
-        Raw Pangolinfo API response on success, or None on failure.
-        The response has the structure::
-
-            {
-              "data": { "json": [ { "data": { "results": [...] } } ] }
-            }
-
-        where each result contains ASIN, Title, Price, Star, Rating, Sales.
+        Raw provider response, or None on failure.
     """
-    import requests
+    from .providers import get_provider
 
-    api_token = os.getenv("PANGOLINFO_TOKEN") or PANGOLINFO_TOKEN
-    if not api_token:
-        logger.error("PANGOLINFO_TOKEN is not configured. Set it in config.ini or .env")
-        return {"error": "PANGOLINFO_TOKEN missing. Add it to config.ini or .env."}
-
-    payload = {
-        "parserName": "amzKeyword",
-        "site": marketplace,
-        "content": keyword,
-        "format": "json",
-    }
-    headers = {
-        "Authorization": f"Bearer {api_token}",
-        "Content-Type": "application/json",
-    }
-
-    for attempt in range(1, max_retries + 1):
-        try:
-            logger.info(
-                "Pangolinfo scrape — keyword='%s' marketplace=%s (attempt %d/%d)",
-                keyword, marketplace, attempt, max_retries,
+    provider = get_provider()
+    if not provider.is_configured():
+        logger.error("Active provider '%s' is not configured.", provider.slug)
+        return {
+            "error": (
+                f"Provider '{provider.name}' is not configured. "
+                f"Set its credentials in config.ini or .env."
             )
-            resp = requests.post(
-                PANGOLINFO_API_URL,
-                json=payload,
-                headers=headers,
-                timeout=30,
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                results = data.get("data", {}).get("json", [])
-                logger.info(
-                    "Pangolinfo returned %d result groups for '%s'",
-                    len(results), keyword,
-                )
-                # Wrap in a structure compatible with format_data_for_csv
-                return data
-            else:
-                logger.warning(
-                    "Pangolinfo attempt %d/%d — HTTP %d: %s",
-                    attempt, max_retries, resp.status_code, resp.text[:200],
-                )
-                if attempt < max_retries:
-                    time.sleep(REQUEST_DELAY)
-        except ImportError:
-            logger.error("requests library not installed. Run: pip install requests")
-            return {"error": "requests library not installed. Run: pip install requests"}
-        except requests.exceptions.Timeout:
-            logger.warning("Pangolinfo timeout attempt %d/%d", attempt, max_retries)
-            if attempt < max_retries:
-                time.sleep(REQUEST_DELAY)
-        except Exception as exc:
-            logger.warning(
-                "Pangolinfo attempt %d/%d failed: %s", attempt, max_retries, exc,
-            )
-            if attempt < max_retries:
-                time.sleep(REQUEST_DELAY)
-            else:
-                logger.error("All %d attempts exhausted for '%s'", max_retries, keyword)
-                return None
+        }
 
-    return None
+    logger.info(
+        "fetch_category_url -> provider='%s' keyword='%s' marketplace=%s",
+        provider.slug, keyword, marketplace,
+    )
+    return provider.scrape(keyword, marketplace=marketplace, max_retries=max_retries)
 
 
 def normalize_pangolinfo_results(raw_json: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
-    Extract and normalize product results from a Pangolinfo API response
-    into the unified schema expected by ``format_data_for_csv``.
+    Normalize a provider response into the unified schema.
 
-    The Pangolinfo ``amzKeyword`` parser returns results nested under::
-
-        data.json[0].data.results
-
-    Each result item is expected to have fields like:
-        ASIN, Title, Price, Star, Rating, Sales
-
-    Output schema (ASIN, Title, Author, Price, BSR, ReviewCount, Rating, ...)
-    is compatible with ``format_data_for_csv``.
+    Delegates to the active provider's ``.normalize()`` method so the caller
+    only sees ASIN, Title, Price, ReviewCount, Rating, Sales, etc. regardless
+    of which provider is active.
     """
-    items: List[Dict[str, Any]] = []
+    from .providers import get_provider
 
-    try:
-        json_list = raw_json.get("data", {}).get("json", [])
-        if not json_list:
-            logger.warning("Pangolinfo response has no 'data.json' array.")
-            return items
-
-        results = json_list[0].get("data", {}).get("results", [])
-        if not results:
-            logger.warning("Pangolinfo results empty.")
-            return items
-    except (AttributeError, IndexError, TypeError) as exc:
-        logger.error("Unexpected Pangolinfo structure: %s", exc)
-        return items
-
-    for raw in results:
-        try:
-            price = raw.get("Price", 0) or 0
-            if isinstance(price, str):
-                price = float(price.replace("$", "").replace(",", "").strip() or 0)
-
-            review_count = int(raw.get("Rating", 0) or 0)
-            rating = float(raw.get("Star", 0) or 0)
-
-            item = {
-                "ASIN": raw.get("ASIN", "N/A"),
-                "Title": (raw.get("Title") or "").strip(),
-                "Author": raw.get("Author", "Unknown") or "Unknown",
-                "Price": price,
-                "BSR": 0,
-                "ReviewCount": review_count,
-                "Rating": rating,
-                "PublicationDate": raw.get("PublicationDate", ""),
-                "Position": len(items) + 1,
-                "thumbnail": raw.get("ImageUrl", raw.get("imageUrl", "")),
-                "Sales": raw.get("Sales", 0) or 0,
-            }
-            items.append(item)
-        except Exception as exc:
-            logger.warning("Skipping Pangolinfo item: %s", exc)
-            continue
-
-    logger.info("Normalized %d Pangolinfo items.", len(items))
-    return items
+    provider = get_provider()
+    return provider.normalize(raw_json)
 
 
 def tunnel_category_pages(
