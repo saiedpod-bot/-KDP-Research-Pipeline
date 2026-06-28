@@ -13,9 +13,10 @@ from . import config_manager
 from . import design_engine
 from . import pre_research
 from . import providers
+from . import cache
 
 __all__ = [
     "scraper", "analyzer", "exporter", "database",
     "config_manager", "design_engine", "pre_research",
-    "providers",
+    "providers", "cache",
 ]

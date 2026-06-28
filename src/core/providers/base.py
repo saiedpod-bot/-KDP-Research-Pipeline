@@ -81,3 +81,7 @@ class BaseProvider(ABC):
             "slug": self.slug,
             "configured": self.is_configured(),
         }
+
+
+# Alias for users who prefer the "Scraper" naming convention
+BaseScraper = BaseProvider

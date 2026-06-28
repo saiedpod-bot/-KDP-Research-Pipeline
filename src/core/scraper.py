@@ -1024,6 +1024,62 @@ def fetch_category_url(
     return provider.scrape(keyword, marketplace=marketplace, max_retries=max_retries)
 
 
+# ---------------------------------------------------------------------------
+# Provider Router — selects scraper based on task type with fallback
+# ---------------------------------------------------------------------------
+def get_scraper_for_task(
+    task_type: str = "deep",
+    preferred: Optional[str] = None,
+) -> Any:
+    """
+    Return the best provider for a given task type.
+
+    Parameters
+    ----------
+    task_type : str
+        ``"urgent"`` for fast/cheap pre-search (Pangolinfo preferred),
+        ``"deep"`` for rich/reliable analysis (Oxylabs preferred).
+    preferred : str, optional
+        Force a specific provider slug.
+
+    Returns
+    -------
+    BaseProvider instance
+    """
+    from .providers.registry import get_scraper_for_task as _router
+
+    return _router(task_type=task_type, preferred=preferred)
+
+
+def execute_with_fallback(
+    keyword: str,
+    marketplace: str = "amz_us",
+    task_type: str = "deep",
+    **kwargs,
+) -> Dict:
+    """
+    High-level scrape: auto-select provider via router, try primary,
+    and fallback to next on failure.
+
+    Parameters
+    ----------
+    keyword : str
+    marketplace : str
+    task_type : str
+        ``"urgent"`` or ``"deep"``.
+    **kwargs
+        Passed to ``provider.scrape()``.
+
+    Returns
+    -------
+    dict
+        Raw provider response, or ``{"error": ...}`` if all fail.
+    """
+    from .providers.registry import execute_with_fallback as _fallback
+
+    return _fallback(keyword, marketplace=marketplace, task_type=task_type, **kwargs)
+
+
 def normalize_pangolinfo_results(raw_json: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Normalize a provider response into the unified schema.

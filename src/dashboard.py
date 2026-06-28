@@ -468,7 +468,7 @@ if st.session_state.get("high_contrast", False):
 # Import pipeline modules from core package
 # ---------------------------------------------------------------------------
 try:
-    from core import scraper, analyzer, exporter, database, config_manager
+    from core import scraper, analyzer, exporter, database, config_manager, providers, pre_research
     MODULES_OK = True
 except ImportError as exc:
     st.error(f"Pipeline modules could not be imported: {exc}")
@@ -902,6 +902,18 @@ def run_deep_tunnel_dashboard(
     return result
 
 
+# -- Early session init for keys accessed in sidebar (before init block) ---
+if "quick_discover_suggestions" not in st.session_state:
+    st.session_state["quick_discover_suggestions"] = []
+if "validated_keywords" not in st.session_state:
+    st.session_state["validated_keywords"] = set()
+if "search_override" not in st.session_state:
+    st.session_state["search_override"] = ""
+if "quick_start" not in st.session_state:
+    st.session_state["quick_start"] = True
+if "use_sample_data" not in st.session_state:
+    st.session_state["use_sample_data"] = False
+
 # ---------------------------------------------------------------------------
 # Sidebar inputs
 # ---------------------------------------------------------------------------
@@ -1311,6 +1323,39 @@ def _display_results(results: Optional[Dict[str, Any]], query: str, sheet_id: st
                 f"</div>",
                 unsafe_allow_html=True,
             )
+
+        # -- Deep Analysis Report (expander with breakdown progress bars) ------
+        with st.expander(":bar_chart: Deep Analysis Report", expanded=False):
+            bd = market["breakdown"]
+            st.markdown("#### :rocket: Market Score Decomposition")
+            breakdown_items = [
+                ("Demand", "Demand Score", bd["demand"], 100, "How many potential buyers are searching for this niche"),
+                ("Competition", "Competition Score", bd["competition"], 100, "How saturated the market is"),
+                ("Pricing", "Pricing Score", bd["pricing"], 100, "Whether prices support healthy margins"),
+                ("Dominance Penalty", "Dominance Penalty", bd["dominance_penalty"], 25, "Negative adjustment for top-heavy markets"),
+            ]
+            for _, short, val, _max, desc in breakdown_items:
+                cols = st.columns([1, 3, 6])
+                with cols[0]:
+                    st.markdown(f"**{short}**")
+                with cols[1]:
+                    pct = min(val / _max, 1.0)
+                    st.progress(pct)
+                with cols[2]:
+                    key = short.lower().replace(" ", "_") + "_contrib"
+                    contrib = bd.get(key, 0)
+                    st.caption(f"{val:.0f}/{_max}  |  Weighted: {contrib:+.0f}  \u2014  {desc}")
+
+            st.markdown("---")
+            verdict_band = market["band"]
+            verdict_text = market["verdict"]
+            if verdict_band in ("Excellent", "Great"):
+                st.success(f":trophy: **Verdict: {verdict_band}** \u2014 {verdict_text}")
+            elif verdict_band in ("Good", "Okay"):
+                st.info(f"\U0001f4ca **Verdict: {verdict_band}** \u2014 {verdict_text}")
+            else:
+                st.warning(f":warning: **Verdict: {verdict_band}** \u2014 {verdict_text}")
+            st.caption(f"Based on {bd['product_count']} products")
 
     # -- Score Legend (educational tooltips) ------------------------------------
     with st.expander(":green_book: What do these scores mean?"):

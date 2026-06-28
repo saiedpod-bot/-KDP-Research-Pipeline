@@ -13,16 +13,27 @@ Usage::
     products = provider.normalize(raw)
 """
 
-from .base import BaseProvider
-from .registry import get_provider, list_providers, register_provider
+from .base import BaseProvider, BaseScraper
+from .registry import (
+    get_provider,
+    get_scraper_for_task,
+    execute_with_fallback,
+    list_providers,
+    register_provider,
+)
 from .pangolinfo import PangolinfoProvider
 from .apify import ApifyProvider
+from .oxylabs import OxylabsProvider
 
 __all__ = [
     "BaseProvider",
+    "BaseScraper",
     "PangolinfoProvider",
     "ApifyProvider",
+    "OxylabsProvider",
     "get_provider",
+    "get_scraper_for_task",
+    "execute_with_fallback",
     "list_providers",
     "register_provider",
 ]
