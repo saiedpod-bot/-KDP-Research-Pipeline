@@ -1,143 +1,139 @@
 <div align="center">
-  <img src="assets/logo.png" alt="KDP Discovery Engine Pro" width="140">
-  <h1>KDP Discovery Engine Pro</h1>
-  <p><strong>Professional Niche Research & Profit Optimization for Kindle Direct Publishing</strong></p>
+  <h1> KDP Research Pipeline</h1>
+  <p><strong>Production-grade Amazon KDP market intelligence platform with tiered data providers, zero-cost pre-research, and a 0–100 Market Score algorithm.</strong></p>
   <br>
   <p>
-    <a href="#-why-kdp-discovery-engine-pro">Why</a> •
     <a href="#-key-features">Features</a> •
+    <a href="#-data-providers">Data Providers</a> •
     <a href="#-tech-stack">Tech Stack</a> •
     <a href="#-quick-start">Quick Start</a> •
     <a href="#-configuration">Configuration</a> •
-    <a href="#-comparison-with-competitors">Comparison</a> •
-    <a href="#-contributing">Contributing</a>
+    <a href="#-project-structure">Structure</a>
   </p>
   <br>
   <p>
-    <img src="https://img.shields.io/badge/Version-2.0-blue?style=flat-square" alt="Version 2.0">
+    <img src="https://img.shields.io/badge/Version-3.0-blue?style=flat-square" alt="Version 3.0">
     <img src="https://img.shields.io/badge/Python-3.10+-yellow?style=flat-square&logo=python" alt="Python 3.10+">
     <img src="https://img.shields.io/badge/Streamlit-1.28+-red?style=flat-square&logo=streamlit" alt="Streamlit">
     <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square" alt="Cross-platform">
-    <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License">
-    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome">
   </p>
 </div>
 
 ---
 
-##   Why KDP Discovery Engine Pro?
+##  Key Features
 
-> **"The only research tool built from the ground up for KDP book publishers — not t-shirt sellers."**
+###  Tiered Data Providers
+Three interchangeable backends — swap at runtime via `PROVIDER_ACTIVE`:
 
-Every day, thousands of KDP authors waste hours manually researching niches, crunching royalty numbers, and trying to gauge competition. The existing tools (MerchMetrix, PodCS, Podly, etc.) were built for **Print-on-Demand merchandise** — t-shirts, mugs, phone cases. They don't understand:
+| Provider | Best For | Speed | Cost | Data Quality |
+|---|---|---|---|---|
+| **Pangolinfo** | Urgent pre-scrapes | ~3s | 1 credit/query | 40–60 products, medium detail |
+| **Apify** | Flexible crawling | 60–120s | ~$0.05/run | Customizable actor-based |
+| **Oxylabs** | Deep analysis | ~10s | ~$0.01/query | Rich schema, parse: true |
 
-- **KDP royalty tiers** — 70% eBook vs 60% paperback vs 35% at different price points
-- **Book-specific competition metrics** — BSR, page count, ink type, trim size
-- **Multi-format profit dynamics** — the same book earns differently as eBook vs paperback vs hardcover
+Providers are swappable at runtime with **zero code changes** via the Settings tab or `PROVIDER_ACTIVE` env var.
 
-**KDP Discovery Engine Pro** solves this with a purpose-built platform that:
+###  Intelligent Caching (`src/core/cache.py`)
+- SHA-256 hash keyed on `(query + provider_slug)` — each provider caches separately
+- `get_or_scrape()` checks `cache/{hash}.json` before calling any API
+- Integrated into `execute_with_fallback()` so **all providers benefit automatically**
+- Zero API credits consumed on cache hits
 
-- **Discovers profitable niches** before they get saturated
-- **Calculates exact KDP net profit** across all 3 formats in real time
-- **Ranks opportunities** with a proprietary Unified Opportunity Index (UOI)
-- **Protects your business** with built-in trademark scanning (98 restricted terms)
-- **Tracks markets over time** with automated snapshot history and trend signals
-- **Generates ideas** from any seed keyword — 40+ niche variations per query
+###  Task-based Provider Router
+- **`urgent`** (autocomplete / pre-search) → Pangolinfo (fastest, cheapest)
+- **`deep`** (full analysis) → Oxylabs (richest data)
+- **Fallback chain** — if primary fails, automatic retry with next configured provider
 
-> "With KDP Discovery Engine Pro, I found a low-competition niche in under 10 minutes that earns me $1,200/month passive income." — _Early Beta Tester_
+###  Pre-Research Engine (`src/core/pre_research.py`)
+- **Zero-cost keyword discovery** via Google Suggest API (no credits consumed)
+- `expand_keywords()` and `get_niche_suggestions()` — 10+ niche variations per seed term
+- Quick Discover panel in the sidebar — select suggestions to auto-fill the pipeline
+
+###  Market Score Algorithm (0–100)
+Four-factor scoring engine in `src/core/analyzer.py`:
+
+```
+Score = Demand × 35% + Competition × 30% + Pricing × 15% - Dominance Penalty
+```
+
+- **Demand** (35%) — average review volume, total market size
+- **Competition** (30%) — price variance, review distribution, brand concentration
+- **Pricing** (15%) — average price, margin potential
+- **Dominance Penalty** (-25%) — top-5 market share, best-seller concentration
+
+Result: 0–100 score with verdict bands (Excellent / Great / Good / Okay / Weak / Poor).
+
+###  Deep Analysis Report
+Collapsible expander in the dashboard showing:
+- Progress bars for each signal (Demand, Competition, Pricing, Dominance Penalty)
+- Weighted contributions with max-score denominators
+- Verdict badge (`st.success` / `st.info` / `st.warning` based on score band)
+
+###  Validation Gate
+Pipeline blocks unscoped keywords unless the user validates via Quick Discover or checks `Force Analysis` — prevents wasted API credits on exploratory queries.
+
+###  Bilingual Interface (English / Arabic)
+Full RTL support for Arabic-speaking KDP authors.
 
 ---
 
-##   Key Features
+##  Data Providers
 
-###   Unified Opportunity Index (UOI)
-Proprietary 0–100 scoring that combines EOS opportunity, competitive density inverse, profit margin, keyword relevance, and trend signals into a single actionable number.
+### Pangolinfo (`PROVIDER_ACTIVE=pangolinfo`)
+- Endpoint: `scrapeapi.pangolinfo.com/api/v1/scrape`
+- Source: `amzKeyword` — returns 40–60 products per query
+- Auth: Bearer token (`PANGOLINFO_TOKEN`)
+- Normalized fields: ASIN, Title, Price, Rating, ReviewCount, Sales
 
-```
-UOI = (EOS × 40%) + (Density Inverse × 25%) + (Profit Margin × 20%)
-      + (Keyword Score × 10%) + (Trend Signal × 5%)
-```
+### Apify (`PROVIDER_ACTIVE=apify`)
+- Actor: `junglee/Amazon-crawler` (ID: `BG3WDrGdteHgZgbPK`)
+- REST API: starts actor run, polls until completion, fetches dataset
+- Auth: `APIFY_TOKEN` + `APIFY_ACTOR_ID`
+- Can take 60–120s on cold start — best for deep analysis
 
-###   Deep Niche Tunneling
-Analyze any niche in **two modes** side-by-side:
-- 🔷 **Filtered (Last 30 Days):** See only new products entering the market
-- 🔷 **Unfiltered:** Full competitive landscape
-- 🏆 Instantly detect **Golden Niches** — low density + high visibility
+### Oxylabs (`PROVIDER_ACTIVE=oxylabs`)
+- Endpoint: `realtime.oxylabs.io/v1/queries`
+- Sources: `amazon_search` (keyword search, `parse: true`), `amazon_product` (ASIN deep-dive)
+- Auth: Basic Auth (`OXYLABS_USERNAME` + `OXYLABS_PASSWORD`)
+- Response structure: `results[0].content.results` is a dict with keys `organic`, `amazons_choices`, `paid`, `suggested`
+- Product schema: `asin`, `title`, `price`, `rating` (star float), `reviews_count`, `url_image`, `best_seller`, `is_sponsored`
 
-###   Multi-Format Profit Calculator
-
-| Format | Royalty Structure | Print Cost |
-|---|---|---|
-| **eBook** | 70% ($2.99–$9.99) / 35% (outside range) | $0.00 |
-| **Paperback** | 60% (≥$9.99) / 50% (<$9.99) | $1.00 + $0.012/page (B&W) |
-| **Hardcover** | 60% (≥$9.99) / 50% (<$9.99) | $1.00 + $0.055/page (Color) |
-
-The engine **automatically recommends the best format** at every price point via bulk scenario modeling.
-
-###   Batch Niche Comparison
-Compare **10+ niches** side-by-side in a single table. The engine highlights the **best scoring niche** so you know where to focus first.
-
-###   Niche Idea Generator
-Enter a seed keyword → get **10+ niche variations** with difficulty ratings:
-
-| Seed | Generated Ideas |
-|---|---|
-| `coloring book` | Large Print · Stress Relief · Mindfulness · Animal · Nature · Seasonal |
-| `cookbook` | Keto · Vegan Meal Prep · Low Carb · Mediterranean · Paleo · 30-Minute |
-
-###   Trademark Safety Check
-Scan any keyword against **98 restricted terms** (Disney™, Marvel™, Harry Potter™, NFL™, Nike™, and more) to prevent IP infringement before you publish.
-
-###   Competitor Intelligence Suite
-- **Trend Sparklines** — BSR direction at a glance (📈 improving · 📉 declining · ➡️ stable)
-- **Removed Products Tracker** — detect products that vanished from the market
-- **Keyword Gap Analysis** — find keywords competitors rank for that you're missing
-- **Snapshot History** — automated daily tracking of niche metrics over time
-
-###   Multi-Marketplace Support
-
-| 🇺🇸 US | 🇬🇧 UK | 🇩🇪 DE | 🇫🇷 FR | 🇯🇵 JP | 🇨🇦 CA | 🇦🇺 AU | 🇮🇳 IN | 🇲🇽 MX | 🇮🇹 IT | 🇪🇸 ES |
-|---|---|---|---|---|---|---|---|---|---|---|
-
-###   Arabic/English Bilingual Interface
-Full RTL support for Arabic-speaking KDP authors — the only KDP research tool with this capability.
+> Normalizer merges all sections (`organic` + `amazons_choices` + `paid`) into a flat list and maps Oxylabs field names to the unified schema.
 
 ---
 
-##   Tech Stack
+##  Tech Stack
 
 | Layer | Technology | Purpose |
 |---|---|---|
 | **Language** | Python 3.10+ | Core logic & orchestration |
 | **UI Framework** | Streamlit 1.28+ | Interactive dashboard |
 | **Data** | pandas, SQLite | Analysis & persistence |
-| **Search API** | SerpApi | Amazon product data |
-| **Visual** | Custom CSS (glass-morphism) | Modern dark theme |
-| **Packaging** | PyInstaller 6+ | Single-file .exe distribution |
-| **Obfuscation** | PyArmor 8+ | IP protection for core algorithms |
+| **Scraping API** | Pangolinfo / Apify / Oxylabs | Multi-provider data gathering |
+| **Pre-Research** | Google Suggest (free) | Zero-cost keyword discovery |
+| **Cache** | Local JSON (SHA-256 hashed) | Prevents redundant API calls |
 | **Export** | gspread + google-auth | Google Sheets integration |
 
 ---
 
-##   Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Python 3.10 or higher ([download](https://python.org))
-- A free SerpApi API key ([sign up](https://serpapi.com) — 100 searches/month free)
+- At least one provider API key (see [Configuration](#configuration))
 
 ### Installation
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/kdp-discovery-engine-pro.git
-cd kdp-discovery-engine-pro
+git clone https://github.com/saiedpod-bot/-KDP-Research-Pipeline.git
+cd kdp-research-pipeline
 
-# 2. (Recommended) Create and activate a virtual environment
+# 2. Create and activate a virtual environment
 python -m venv venv
-
 # Windows
 venv\Scripts\activate
-
 # macOS / Linux
 source venv/bin/activate
 
@@ -145,10 +141,9 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 4. Configure your API key
+# 4. Configure your API keys
 cp config.ini.example config.ini
-# Edit config.ini and add your SerpApi key:
-#     SERPAPI_KEY=your_key_here
+# Edit config.ini with your credentials (see Configuration section)
 ```
 
 ### Launch the Dashboard
@@ -157,223 +152,163 @@ cp config.ini.example config.ini
 streamlit run main.py
 ```
 
-Your browser will open to `http://localhost:8501` with the full KDP Discovery Engine dashboard.
-
-### Run Headless (CLI Mode)
-
-```bash
-# Quick niche scan
-python main.py --cli "low carb cookbook for beginners" --pages 5
-
-# Full pipeline with export
-python main.py --cli "adhd planner for adults" --sheet-id "abc123"
-
-# View all CLI options
-python main.py --cli --help
-```
-
-### Run from a Standalone Executable (Windows)
-
-1. Download the latest `KDP_Discovery.exe` from the [Releases](https://github.com/your-org/kdp-discovery-engine-pro/releases) page
-2. Place it in an empty folder with `config.ini`
-3. Double-click `KDP_Discovery.exe`
-
-> No Python installation needed — the .exe bundles everything.
+Your browser will open to `http://localhost:8501`.
 
 ---
 
-## [Placeholder: Dashboard Demo GIF]
-
-![Dashboard Screenshot](assets/dashboard_preview.png)
-<!-- Replace with an actual animated GIF showing the workflow:
-    1. Type a keyword → 2. Run pipeline → 3. View gold mine results → 4. Deep tunnel a niche -->
-
----
-
-##   Configuration
+##  Configuration
 
 ### config.ini
 
 ```ini
-[API Keys]
+PROVIDER_ACTIVE=pangolinfo
+
+PANGOLINFO_TOKEN=eyJ...
+
+APIFY_TOKEN=apify_api_...
+APIFY_ACTOR_ID=BG3WDrGdteHgZgbPK
+
+OXYLABS_USERNAME=your_username
+OXYLABS_PASSWORD=your_password
+
 SERPAPI_KEY=your_serpapi_key_here
 GOOGLE_SHEET_ID=
 
-[Marketplace]
 AMAZON_DOMAIN=amazon.com
 
-[Application]
-THEME=dark
-LANGUAGE=en
 MAX_PAGES=3
 MIN_PRICE=7.00
 ```
 
 | Setting | Required | Default | Description |
 |---|---|---|---|
-| `SERPAPI_KEY` | **Yes** | — | [SerpApi](https://serpapi.com) key for Amazon search |
+| `PROVIDER_ACTIVE` | **Yes** | `pangolinfo` | Active provider: `pangolinfo`, `apify`, or `oxylabs` |
+| `PANGOLINFO_TOKEN` | For Pangolinfo | — | Bearer token from Pangolinfo dashboard |
+| `APIFY_TOKEN` | For Apify | — | Apify API token |
+| `APIFY_ACTOR_ID` | For Apify | `BG3WDrGdteHgZgbPK` | Amazon Crawler actor ID |
+| `OXYLABS_USERNAME` | For Oxylabs | — | Oxylabs username (Basic Auth) |
+| `OXYLABS_PASSWORD` | For Oxylabs | — | Oxylabs password (Basic Auth) |
+| `SERPAPI_KEY` | Optional | — | Legacy SerpApi key (for tunnel features) |
 | `GOOGLE_SHEET_ID` | No | — | Google Sheet ID for export |
-| `AMAZON_DOMAIN` | No | `amazon.com` | Marketplace domain (see table below) |
-| `THEME` | No | `dark` | `dark` or `light` |
-| `LANGUAGE` | No | `en` | `en` (English) or `ar` (Arabic) |
+| `AMAZON_DOMAIN` | No | `amazon.com` | Marketplace domain |
 | `MAX_PAGES` | No | `3` | Search pages (1–20) |
 | `MIN_PRICE` | No | `7.00` | Minimum product price filter |
 
 ---
 
-##   Project Structure
+##  Project Structure
 
 ```
-kdp-discovery-engine-pro/
-├── main.py                    # Entry point (streamlit run main.py)
-├── config.ini                 # User configuration (gitignored)
-├── config.ini.example         # Configuration template (versioned)
-├── requirements.txt           # Python dependencies
-├── build_spec.spec            # PyInstaller build spec
-├── pyarmor_build.py           # Code obfuscation script
+├── main.py                       # Entry point (streamlit run main.py)
+├── config.ini                    # User configuration (gitignored)
+├── requirements.txt              # Python dependencies
 │
 ├── src/
-│   ├── dashboard.py           # Streamlit UI (full interactive dashboard)
-│   ├── cli.py                 # Command-line interface
+│   ├── dashboard.py              # Streamlit UI (full interactive dashboard, 3500+ lines)
+│   ├── cli.py                    # Command-line interface
 │   └── core/
-│       ├── __init__.py        # Package exports
-│       ├── analyzer.py        # Scoring algorithms (EOS, UOI, profit, trademark)
-│       ├── scraper.py         # Amazon data collection (SerpApi)
-│       ├── database.py        # SQLite persistence layer
-│       ├── exporter.py        # Google Sheets export
-│       └── config_manager.py  # Configuration resolution chain
+│       ├── __init__.py           # Package exports
+│       ├── cache.py              # **[NEW]** Local JSON cache — get_or_scrape(), SHA-256 hashing
+│       ├── analyzer.py           # Market Score algorithm (0–100), EOS, UOI, trademark
+│       ├── scraper.py            # Provider-agnostic fetcher — delegates to active provider
+│       ├── pre_research.py       # **[NEW]** Google Suggest keyword discovery (zero-cost)
+│       ├── database.py           # SQLite persistence layer
+│       ├── exporter.py           # Google Sheets export
+│       ├── config_manager.py     # Configuration resolution chain
+│       └── providers/            # **[NEW]** Pluggable provider package
+│           ├── __init__.py       # Exports: BaseProvider, BaseScraper, all providers
+│           ├── base.py           # Abstract base class + BaseScraper alias
+│           ├── registry.py       # Provider registry, factory, task-based router
+│           ├── pangolinfo.py     # Pangolinfo API client (Bearer auth, amzKeyword)
+│           ├── apify.py          # Apify actor client (REST API, poll-for-completion)
+│           └── oxylabs.py        # **[NEW]** Oxylabs client (Basic auth, amazon_search)
 │
-├── assets/                    # Icons, images, static resources
-├── data/                      # SQLite database, logs, cache (gitignored)
-├── output/                    # Exported results (gitignored)
+├── cache/                        # **[NEW]** Auto-created cache directory (gitignored)
+├── data/                         # SQLite database, logs (gitignored)
+├── output/                       # Exported results (gitignored)
 │
-├── .github/
-│   └── ISSUE_TEMPLATE/        # Issue templates for contributors
-│       ├── bug_report.md
-│       └── feature_request.md
-│
-├── CONTRIBUTING.md            # Contribution guidelines
-├── LICENSE                    # MIT License
-├── SECURITY.md                # Security policy
-└── README.md                  # This file
+└── assets/                       # Icons, images, static resources
 ```
 
 ---
 
-##   Security Notice
+##  Architecture
+
+### Provider-agnostic Pipeline
+
+```
+User Query
+    │
+    ├── Provider Router (get_scraper_for_task)
+    │   ├── urgent → Pangolinfo (fast)
+    │   └── deep   → Oxylabs  (rich)
+    │
+    ├── Cache Check (get_or_scrape)
+    │   ├── HIT  → return cached JSON
+    │   └── MISS → provider.scrape() → save to cache
+    │
+    ├── Normalize (provider.normalize())
+    │   └── Unified schema: ASIN, Title, Price, Rating, ReviewCount, Sales
+    │
+    ├── Market Score (calculate_market_score())
+    │   └── 0–100 score + breakdown + verdict
+    │
+    └── Display (dashboard.py)
+        ├── Intelligence Panel (gauge)
+        ├── Deep Analysis Report (progress bars)
+        └── Gold-Mine Table
+```
+
+### Cache Flow
+
+```
+execute_with_fallback(keyword, provider)
+    → get_or_scrape(keyword, provider_slug, scrape_fn)
+        → get_cached(keyword, provider_slug)
+            ├── if cache/{hash}.json exists → return it (0 API credits)
+            └── if not → call scrape_fn() → save to cache/{hash}.json → return
+```
+
+Each provider has an isolated cache namespace — same query with different providers generates different hashes.
+
+---
+
+##  Development
+
+### Testing a Provider
+
+```bash
+# Set active provider
+set PROVIDER_ACTIVE=oxylabs
+
+# Run the dashboard
+streamlit run main.py
+```
+
+Or use the Settings tab in the dashboard to switch providers at runtime.
+
+### Adding a New Provider
+
+1. Create `src/core/providers/new_provider.py`
+2. Implement `BaseProvider` ABC (`.scrape()`, `.normalize()`, `.is_configured()`)
+3. Register in `registry.py` → `_BUILTIN_PROVIDERS`
+4. Add to `__init__.py` exports
+5. Add credentials to `config.ini`
+6. Caching works automatically via `execute_with_fallback()`
+
+---
+
+##  Security Notice
 
 **⚠️ Protect your API keys.**
 
 1. **`config.ini` is listed in `.gitignore`** — it will never be committed to version control
 2. **Never share your `config.ini`**, `credentials.json`, or `.env` files
-3. **Use environment variables** as an alternative: `export SERPAPI_KEY="sk-..."`
-4. **The `.env.example` and `config.ini.example`** files are safe templates — they contain placeholder values only
-5. **Revoke compromised keys** immediately via your [SerpApi dashboard](https://serpapi.com)
+3. **Use environment variables** as an alternative: `set PROVIDER_ACTIVE=oxylabs`
+4. **Revoke compromised keys** immediately via the respective provider dashboards
 
 ---
 
-##   Comparison with Competitors
+##  License
 
-| Feature | 🚀 KDP Engine Pro | MerchMetrix | PodCS | Podly |
-|---|---|---|---|---|
-| **KDP Royalty Calculator (3 formats)** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Unified Opportunity Index (proprietary)** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Deep Niche Tunneling (30-day filter)** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Batch Niche Comparison** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Niche Idea Generator** | ✅ Yes **FREE** | ✅ Yes ($29/mo) | ❌ No | ❌ No |
-| **Trademark Checker (98 terms)** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
-| **Removed Products Tracker** | ✅ Yes **FREE** | ❌ No | ✅ Yes ($19/mo) | ❌ No |
-| **BSR Trend Analysis** | ✅ Yes | ❌ No | ❌ No | ✅ Yes |
-| **Multi-Marketplace (11 domains)** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Bilingual (English/Arabic)** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Offline / SQLite Storage** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Open Source (MIT)** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Price** | **FREE** | $29/month | $19/month | $15/month |
-
----
-
-##   Packaging & Distribution
-
-### Build a Standalone Executable
-
-```bash
-pip install pyinstaller pywin32
-pyinstaller --clean build_spec.spec
-# Output: dist/KDP_Discovery.exe (~200 MB)
-```
-
-### Obfuscate Core Algorithms (IP Protection)
-
-```bash
-pip install pyarmor
-python pyarmor_build.py
-# Output: dist_obfuscated/src/core/*.py (obfuscated bytecode)
-# Then build the .exe:
-pyinstaller --clean build_spec.spec
-```
-
-Obfuscated modules: `analyzer.py`, `database.py`, `scraper.py`, `exporter.py`, `config_manager.py`.
-
----
-
-##   System Requirements
-
-| Resource | Minimum | Recommended |
-|---|---|---|
-| Python | 3.10 | 3.11+ |
-| RAM | 512 MB | 1 GB |
-| Disk (source) | 200 MB | 500 MB |
-| Disk (PyInstaller build) | 1 GB | 2 GB |
-| OS | Windows 10, macOS 12, Ubuntu 20.04 | Windows 11, macOS 14 |
-| API | SerpApi free tier (100/mo) | SerpApi paid tier |
-
----
-
-##   Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
-
-- How to report bugs
-- How to suggest features
-- How to submit pull requests
-- Our code of conduct
-
-Quick links:
-- [Open an Issue](https://github.com/your-org/kdp-discovery-engine-pro/issues/new/choose)
-- [Submit a PR](https://github.com/your-org/kdp-discovery-engine-pro/compare)
-
----
-
-##   License
-
-[MIT License](LICENSE) — See [LICENSE](LICENSE) for full text.
-
----
-
-##   Roadmap
-
-- [ ] **Historical BSR Graphs** — time-series visualization from snapshot data
-- [ ] **USPTO Trademark API Integration** — live trademark database queries
-- [ ] **Listing Generator** — copy-ready title/bullet templates from top performers
-- [ ] **Responsive Mobile Layout** — research on-the-go
-- [ ] **Premium Tier** — SerpApi credit tracking & usage dashboard
-
----
-
-##   Acknowledgments
-
-- [SerpApi](https://serpapi.com) for Amazon search API
-- [Streamlit](https://streamlit.io) for the interactive dashboard framework
-- All beta testers who provided invaluable feedback
-
----
-
-<div align="center">
-  <p><strong>KDP Discovery Engine Pro</strong> — Built for KDP Authors, by KDP Authors</p>
-  <p>
-    <a href="https://github.com/your-org/kdp-discovery-engine-pro">GitHub</a> •
-    <a href="#-why-kdp-discovery-engine-pro">Documentation</a> •
-    <a href="https://github.com/your-org/kdp-discovery-engine-pro/issues">Issues</a> •
-    <a href="https://github.com/your-org/kdp-discovery-engine-pro/discussions">Discussions</a>
-  </p>
-</div>
+MIT License — See [LICENSE](LICENSE) for full text.
